@@ -1,4 +1,4 @@
-import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
+﻿import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
 
 import { logBancosServiceEvent } from './bancosLogger.js'
 
@@ -40,10 +40,21 @@ export function startBankImportAnalysisRun(request: Parameters<typeof startBankI
 
     return startBankImportAnalysisRunCore(request)
   } catch (error) {
-    logBancosServiceEvent('analysis_start_failed', {
+    const safeData: Record<string, unknown> = {
       error: error instanceof Error ? error.message : 'unknown',
-    })
+    }
+
+    if (request && typeof request === 'object') {
+      const maybe = request as any
+      if (typeof maybe.bankId === 'string') safeData['bankId'] = maybe.bankId
+      if (typeof maybe.fileName === 'string') safeData['fileName'] = maybe.fileName
+    }
+
+    logBancosServiceEvent('analysis_start_failed', safeData)
 
     throw normalizeBankImportError(error)
   }
 }
+
+
+
