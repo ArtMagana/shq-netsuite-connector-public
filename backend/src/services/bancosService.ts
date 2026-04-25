@@ -1,6 +1,8 @@
 import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
 import { logBancosServiceEvent } from './bancosLogger.js'
 
+export type BancosAnalysisStartResult = ReturnType<typeof startBankImportAnalysisRunCore>
+
 export type BancosAnalysisStartRequest = Parameters<typeof startBankImportAnalysisRunCore>[0]
 
 export type BancosServiceResult<T> =
@@ -33,7 +35,7 @@ function normalizeBankImportError(error: unknown): BankImportError {
 
 export function startBankImportAnalysisRun(
   request: Parameters<typeof startBankImportAnalysisRunCore>[0],
-): BancosServiceResult<ReturnType<typeof startBankImportAnalysisRunCore>> {
+): BancosServiceResult<BancosAnalysisStartResult> {
   try {
     if (!request || typeof request !== 'object') {
       throw new BankImportError('La solicitud de analisis bancario no es valida.')
