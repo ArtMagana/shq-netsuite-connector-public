@@ -1,13 +1,6 @@
 import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
 
-function logBancosServiceEvent(event: string, data: Record<string, unknown>) {
-  console.info(JSON.stringify({
-    scope: 'bancos.service',
-    event,
-    ...data,
-    timestampUtc: new Date().toISOString(),
-  }))
-}
+import { logBancosServiceEvent } from './bancosLogger.js'
 
 function normalizeBankImportError(error: unknown): BankImportError {
   if (error instanceof BankImportError) {
