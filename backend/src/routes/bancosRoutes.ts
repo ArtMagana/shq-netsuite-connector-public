@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 
 function getErrorStatus(error: unknown) {
@@ -22,15 +22,14 @@ export function createBancosRoutes(deps: any) {
 
 
   router.post('/analysis/start', requireInternalApiKey, (request, response) => {
-  try {
-    response.json(startBankImportAnalysisRun(request.body))
-  } catch (error) {
-    response.status(getErrorStatus(error)).json({
-      error: error instanceof Error ? error.message : 'Could not start bank analysis.',
-    })
-  }
-})
-
+    try {
+      response.json(startBankImportAnalysisRun(request.body))
+    } catch (error) {
+      response.status(getErrorStatus(error)).json({
+        error: error instanceof Error ? error.message : 'Could not start bank analysis.',
+      })
+    }
+  })
 
   router.get('/config', (_request, response) => {
     try {
@@ -45,5 +44,3 @@ export function createBancosRoutes(deps: any) {
 
   return router
 }
-
-
