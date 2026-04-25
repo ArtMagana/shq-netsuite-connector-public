@@ -211,18 +211,6 @@ export function createApp() {
     previewReconciliation,
   }))
 
-  app.post('/api/inventario/ajustes/reemplazar-lote', requireInternalApiKey, async (request, response) => {
-    try {
-      const client = NetSuiteClient.fromEnv()
-      response.json(await executeInventoryLotReplacement(client, request.body))
-    } catch (error) {
-      const status = error instanceof InventoryLotReplacementError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown inventory lot replacement error.',
-      })
-    }
-  })
-
   app.post('/api/bancos/analyze', async (request, response) => {
     try {
       response.json(await analyzeBankImport(request.body))
