@@ -4,7 +4,7 @@ function getErrorStatus(error: unknown) {
   return error instanceof Error && 'status' in error ? Number(error.status) : 503
 }
 
-export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }: any) {
+export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, executeInventoryAdjustment, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, requireInternalApiKey, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }: any) {
   const router = Router()
 
 
@@ -12,6 +12,19 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
 
 
 
+
+
+  router.post('/ajustes/execute', requireInternalApiKey, async (request, response) => {
+    try {
+      const client = NetSuiteClient.fromEnv()
+      response.json(await executeInventoryAdjustment(client, request.body))
+    } catch (error) {
+      const status = getErrorStatus(error)
+      response.status(status).json({
+        error: error instanceof Error ? error.message : 'Unknown inventory execution error.',
+      })
+    }
+  })
 
   router.post('/ajustes/preview', async (request, response) => {
     try {
