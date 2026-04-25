@@ -43,8 +43,33 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
 
   router.post('/analyze', handleAnalyze)
 
-  function handleAnalysisStart(request: Request<unknown, unknown, BancosAnalysisStartRequest>, response: Response) {
+  function isBancosAnalysisStartRequest(value: unknown): value is BancosAnalysisStartRequest {
+    if (!value || typeof value !== 'object') {
+      return false
+    }
+
+    const body = value as Record<string, unknown>
+
+    return (
+      typeof body.bankId === 'string' &&
+      body.bankId.trim().length > 0 &&
+      typeof body.fileName === 'string' &&
+      body.fileName.trim().length > 0 &&
+      typeof body.fileBase64 === 'string' &&
+      body.fileBase64.trim().length > 0
+    )
+  }
+
+  function handleAnalysisStart(request: Request<unknown, unknown, unknown>, response: Response) {
     try {
+      if (!isBancosAnalysisStartRequest(request.body)) {
+        response.status(400).json({
+          success: false,
+          error: 'La solicitud de analisis bancario no es valida.',
+        })
+        return
+      }
+
       const result = startBankImportAnalysisRun(request.body)
 
       if (!result.success) {
