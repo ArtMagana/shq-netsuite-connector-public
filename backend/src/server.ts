@@ -181,7 +181,7 @@ app.use(
 )
 app.use(express.json({ limit: getJsonBodyLimit() }))
 
-app.use('/api/bancos', createBancosRoutes())
+app.use('/api/bancos', createBancosRoutes({ getBankImportConfig, BankImportError }))
 
 app.use('/api', createBasicRoutes({
   overview,
@@ -305,17 +305,6 @@ app.post('/api/inventario/certificados/lookup', async (request, response) => {
     const status = error instanceof InventoryCertificateError ? error.status : 503
     response.status(status).json({
       error: error instanceof Error ? error.message : 'Unknown inventory certificate lookup error.',
-    })
-  }
-})
-
-app.get('/api/bancos/config', (_request, response) => {
-  try {
-    response.json(getBankImportConfig())
-  } catch (error) {
-    const status = error instanceof BankImportError ? error.status : 503
-    response.status(status).json({
-      error: error instanceof Error ? error.message : 'Unknown bank config error.',
     })
   }
 })
