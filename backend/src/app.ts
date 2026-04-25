@@ -157,7 +157,6 @@ import {
 import { uploadSatAnalysisInvoiceToNetSuite } from './satNetsuiteUpload.js'
 import type { BankImportBankId } from './types.js'
 
-
 export type AppRuntimeInfo = {
   frontendDistDir: string
   hasFrontendBuild: boolean
