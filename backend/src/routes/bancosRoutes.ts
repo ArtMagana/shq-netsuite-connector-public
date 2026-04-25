@@ -1,4 +1,4 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
@@ -15,7 +15,7 @@ function getErrorStatus(error: unknown): number {
   return 503
 }
 
-type BancosAnalyzeRequestBody = Parameters<AnalyzeBankImportFn>[0]
+type BancosAnalyzeRequestBody = Parameters<typeof AnalyzeBankImportFn>[0]
 
 type BancosRouteDeps = {
   analyzeBankImport: typeof AnalyzeBankImportFn
@@ -73,3 +73,4 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
 
   return router
 }
+
