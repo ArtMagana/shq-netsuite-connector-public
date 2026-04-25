@@ -1,11 +1,24 @@
 import { Router } from 'express'
 
-export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError }: any) {
+export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }: any) {
   const router = Router()
 
 
 
 
+
+
+  router.post('/ajustes/lote-resumen', async (request, response) => {
+    try {
+      const client = NetSuiteClient.fromEnv()
+      response.json(await fetchInventoryLotSummary(client, request.body))
+    } catch (error) {
+      const status = error instanceof InventoryLotSummaryError ? error.status : 503
+      response.status(status).json({
+        error: error instanceof Error ? error.message : 'Unknown inventory lot summary error.',
+      })
+    }
+  })
 
   router.get('/ajustes/items/:itemId/snapshot', async (request, response) => {
     try {
