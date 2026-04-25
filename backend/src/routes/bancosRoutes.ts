@@ -27,7 +27,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
     }
   })
 
-  router.post('/analysis/start', requireInternalApiKey, (request, response) => {
+  function handleAnalysisStart(request: any, response: any) {
     try {
       const result = startBankImportAnalysisRun(request.body)
 
@@ -42,7 +42,9 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
         error: error instanceof Error ? error.message : 'Could not start bank analysis.',
       })
     }
-  })
+  }
+
+  router.post('/analysis/start', requireInternalApiKey, handleAnalysisStart)
 
   router.get('/config', (_request, response) => {
     try {
