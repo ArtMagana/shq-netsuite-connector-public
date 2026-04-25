@@ -25,15 +25,24 @@ function resolveUrl(baseUrl: string, path: string) {
   return `${normalizedBaseUrl}${normalizedPath}`
 }
 
+function resolveRequestHeaders(headers?: HeadersInit) {
+  const resolvedHeaders = new Headers(headers)
+  resolvedHeaders.set('Accept', 'application/json')
+
+  const internalApiKey = import.meta.env.VITE_INTERNAL_API_KEY?.trim()
+  if (internalApiKey && !resolvedHeaders.has('X-Internal-Api-Key')) {
+    resolvedHeaders.set('X-Internal-Api-Key', internalApiKey)
+  }
+
+  return resolvedHeaders
+}
+
 export function createHttpClient({ baseUrl }: HttpClientOptions) {
   return {
     async request<T>(path: string, options: HttpRequestOptions = {}) {
       const response = await fetch(resolveUrl(baseUrl, path), {
         ...options,
-        headers: {
-          Accept: 'application/json',
-          ...options.headers,
-        },
+        headers: resolveRequestHeaders(options.headers),
       })
 
       const body = await response.text()
