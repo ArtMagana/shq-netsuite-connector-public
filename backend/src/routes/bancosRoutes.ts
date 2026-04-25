@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 
 function getErrorStatus(error: unknown) {
@@ -27,7 +28,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
     }
   })
 
-  function handleAnalysisStart(request: any, response: any) {
+  function handleAnalysisStart(request: Request, response: Response) {
     try {
       const result = startBankImportAnalysisRun(request.body)
 
