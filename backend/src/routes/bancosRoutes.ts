@@ -5,8 +5,15 @@ function getErrorStatus(error: unknown) {
   return error instanceof Error && 'status' in error ? Number(error.status) : 503
 }
 
-export function createBancosRoutes(deps: any) {
-  const { analyzeBankImport, startBankImportAnalysisRun, startBankImportRun, getBankImportConfig, BankImportError } = deps
+type BancosRouteDeps = {
+  analyzeBankImport: (body: any) => Promise<any>
+  startBankImportAnalysisRun: (body: any) => { success: boolean; data?: any; error?: string }
+  getBankImportConfig: () => any
+  BankImportError: any
+}
+
+export function createBancosRoutes(deps: BancosRouteDeps) {
+  const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError } = deps
   const router = Router()
 
   router.post('/analyze', async (request, response) => {
@@ -19,7 +26,6 @@ export function createBancosRoutes(deps: any) {
       })
     }
   })
-
 
   router.post('/analysis/start', requireInternalApiKey, (request, response) => {
     try {
@@ -34,16 +40,6 @@ export function createBancosRoutes(deps: any) {
     } catch (error) {
       response.status(getErrorStatus(error)).json({
         error: error instanceof Error ? error.message : 'Could not start bank analysis.',
-      })
-    }
-  })
-
-  router.post('/import/start', requireInternalApiKey, (request, response) => {
-    try {
-      response.json(startBankImportRun(request.body))
-    } catch (error) {
-      response.status(getErrorStatus(error)).json({
-        error: error instanceof Error ? error.message : 'Could not start bank import.',
       })
     }
   })
