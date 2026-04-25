@@ -23,7 +23,14 @@ export function createBancosRoutes(deps: any) {
 
   router.post('/analysis/start', requireInternalApiKey, (request, response) => {
     try {
-      response.json(startBankImportAnalysisRun(request.body))
+      const result = startBankImportAnalysisRun(request.body)
+
+      if (!result.success) {
+        response.status(400).json(result)
+        return
+      }
+
+      response.json(result)
     } catch (error) {
       response.status(getErrorStatus(error)).json({
         error: error instanceof Error ? error.message : 'Could not start bank analysis.',

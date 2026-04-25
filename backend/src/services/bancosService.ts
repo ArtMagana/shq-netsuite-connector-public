@@ -1,6 +1,23 @@
-﻿import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
-
+import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
 import { logBancosServiceEvent } from './bancosLogger.js'
+
+export type BancosServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string }
+
+function success<T>(data: T): BancosServiceResult<T> {
+  return {
+    success: true,
+    data,
+  }
+}
+
+function failure<T>(error: BankImportError): BancosServiceResult<T> {
+  return {
+    success: false,
+    error: error.message,
+  }
+}
 
 function normalizeBankImportError(error: unknown): BankImportError {
   if (error instanceof BankImportError) {
@@ -12,7 +29,9 @@ function normalizeBankImportError(error: unknown): BankImportError {
   return new BankImportError(`No se pudo iniciar el analisis bancario: ${message}`)
 }
 
-export function startBankImportAnalysisRun(request: Parameters<typeof startBankImportAnalysisRunCore>[0]) {
+export function startBankImportAnalysisRun(
+  request: Parameters<typeof startBankImportAnalysisRunCore>[0],
+): BancosServiceResult<ReturnType<typeof startBankImportAnalysisRunCore>> {
   try {
     if (!request || typeof request !== 'object') {
       throw new BankImportError('La solicitud de analisis bancario no es valida.')
@@ -38,23 +57,22 @@ export function startBankImportAnalysisRun(request: Parameters<typeof startBankI
       fileName,
     })
 
-    return startBankImportAnalysisRunCore(request)
+    return success(startBankImportAnalysisRunCore(request))
   } catch (error) {
+    const normalizedError = normalizeBankImportError(error)
+
     const safeData: Record<string, unknown> = {
-      error: error instanceof Error ? error.message : 'unknown',
+      error: normalizedError.message,
     }
 
     if (request && typeof request === 'object') {
-      const maybe = request as any
-      if (typeof maybe.bankId === 'string') safeData['bankId'] = maybe.bankId
-      if (typeof maybe.fileName === 'string') safeData['fileName'] = maybe.fileName
+      const maybe = request as Record<string, unknown>
+      if (typeof maybe.bankId === 'string') safeData.bankId = maybe.bankId
+      if (typeof maybe.fileName === 'string') safeData.fileName = maybe.fileName
     }
 
     logBancosServiceEvent('analysis_start_failed', safeData)
 
-    throw normalizeBankImportError(error)
+    return failure(normalizedError)
   }
 }
-
-
-
