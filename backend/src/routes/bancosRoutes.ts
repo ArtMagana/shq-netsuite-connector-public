@@ -28,7 +28,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError } = deps
   const router = Router()
 
-  router.post('/analyze', async (request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) => {
+  async function handleAnalyze(request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) {
     try {
       response.json(await analyzeBankImport(request.body))
     } catch (error) {
@@ -37,7 +37,9 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
         error: error instanceof Error ? error.message : 'Unknown bank import error.',
       })
     }
-  })
+  }
+
+  router.post('/analyze', handleAnalyze)
 
   function handleAnalysisStart(request: Request, response: Response) {
     try {
