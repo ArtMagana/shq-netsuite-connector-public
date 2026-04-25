@@ -6,6 +6,25 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
 
 
 
+
+  router.get('/ajustes/items/:itemId/snapshot', async (request, response) => {
+    try {
+      const client = NetSuiteClient.fromEnv()
+      response.json(
+        await fetchInventoryAdjustmentItemSnapshot(
+          client,
+          String(request.params.itemId ?? ''),
+          request.query.locationId,
+        ),
+      )
+    } catch (error) {
+      const status = error instanceof InventoryAdjustmentError ? error.status : 503
+      response.status(status).json({
+        error: error instanceof Error ? error.message : 'Unknown inventory snapshot error.',
+      })
+    }
+  })
+
   router.get('/ajustes/accounts', async (request, response) => {
     try {
       const client = NetSuiteClient.fromEnv()
