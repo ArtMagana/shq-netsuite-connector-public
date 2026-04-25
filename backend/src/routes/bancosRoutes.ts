@@ -4,6 +4,7 @@ import { requireInternalApiKey } from '../internalApiKey.js'
 import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
 import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServiceResult } from '../services/bancosService.js'
 import { isBancosAnalysisStartRequest, isBancosAnalyzeRequest } from './bancosValidation.js'
+import { validateBody } from './validationMiddleware.js'
 
 function getErrorStatus(error: unknown): number {
   if (error && typeof error === 'object' && 'status' in error) {
@@ -30,15 +31,8 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError } = deps
   const router = Router()
 
-  async function handleAnalyze(request: Request<unknown, unknown, unknown>, response: Response) {
+  async function handleAnalyze(request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) {
     try {
-      if (!isBancosAnalyzeRequest(request.body)) {
-        response.status(400).json({
-          error: 'La solicitud de analisis bancario no es valida.',
-        })
-        return
-      }
-
       const result: BancosAnalyzeResponseBody = await analyzeBankImport(request.body)
       response.json(result)
     } catch (error) {
@@ -49,18 +43,10 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
     }
   }
 
-  router.post('/analyze', handleAnalyze)
+  router.post('/analyze', validateBody(isBancosAnalyzeRequest, 'La solicitud de analisis bancario no es valida.'), handleAnalyze)
 
-  function handleAnalysisStart(request: Request<unknown, unknown, unknown>, response: Response) {
+  function handleAnalysisStart(request: Request<unknown, unknown, BancosAnalysisStartRequest>, response: Response) {
     try {
-      if (!isBancosAnalysisStartRequest(request.body)) {
-        response.status(400).json({
-          success: false,
-          error: 'La solicitud de analisis bancario no es valida.',
-        })
-        return
-      }
-
       const result = startBankImportAnalysisRun(request.body)
 
       if (!result.success) {
@@ -76,7 +62,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
     }
   }
 
-  router.post('/analysis/start', requireInternalApiKey, handleAnalysisStart)
+  router.post('/analysis/start', requireInternalApiKey, validateBody(isBancosAnalysisStartRequest, 'La solicitud de analisis bancario no es valida.'), handleAnalysisStart)
 
   function handleConfig(_request: Request, response: Response) {
     try {
