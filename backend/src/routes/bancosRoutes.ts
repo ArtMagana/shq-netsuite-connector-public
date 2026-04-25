@@ -3,6 +3,7 @@ import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
 import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServiceResult } from '../services/bancosService.js'
+import { isBancosAnalysisStartRequest } from './bancosValidation.js'
 
 function getErrorStatus(error: unknown): number {
   if (error && typeof error === 'object' && 'status' in error) {
@@ -42,23 +43,6 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   }
 
   router.post('/analyze', handleAnalyze)
-
-  function isBancosAnalysisStartRequest(value: unknown): value is BancosAnalysisStartRequest {
-    if (!value || typeof value !== 'object') {
-      return false
-    }
-
-    const body = value as Record<string, unknown>
-
-    return (
-      typeof body.bankId === 'string' &&
-      body.bankId.trim().length > 0 &&
-      typeof body.fileName === 'string' &&
-      body.fileName.trim().length > 0 &&
-      typeof body.fileBase64 === 'string' &&
-      body.fileBase64.trim().length > 0
-    )
-  }
 
   function handleAnalysisStart(request: Request<unknown, unknown, unknown>, response: Response) {
     try {
