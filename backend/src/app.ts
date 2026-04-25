@@ -157,16 +157,30 @@ import { uploadSatAnalysisInvoiceToNetSuite } from './satNetsuiteUpload.js'
 import type { BankImportBankId } from './types.js'
 
 
+export type AppRuntimeInfo = {
+  frontendDistDir: string
+  hasFrontendBuild: boolean
+}
+
+export function getAppRuntimeInfo(): AppRuntimeInfo {
+  const currentDir = dirname(fileURLToPath(import.meta.url))
+  const defaultFrontendDistDir = resolve(currentDir, '../../frontend/dist')
+  const frontendDistDir = resolve(process.env.FRONTEND_DIST_DIR ?? defaultFrontendDistDir)
+  const frontendIndexPath = resolve(frontendDistDir, 'index.html')
+
+  return {
+    frontendDistDir,
+    hasFrontendBuild: existsSync(frontendIndexPath),
+  }
+}
+
 export function createApp() {
-    const app = express()
+  const app = express()
   const currentDir = dirname(fileURLToPath(import.meta.url))
   const defaultFrontendDistDir = resolve(currentDir, '../../frontend/dist')
   const frontendDistDir = resolve(process.env.FRONTEND_DIST_DIR ?? defaultFrontendDistDir)
   const frontendIndexPath = resolve(frontendDistDir, 'index.html')
   const hasFrontendBuild = existsSync(frontendIndexPath)
-  const host = process.env.HOST?.trim() || '127.0.0.1'
-  const port = Number(process.env.PORT ?? 3001)
-  const publicBaseUrl = process.env.APP_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '') || null
 
   app.use(cors(resolveCorsOptions()))
   app.use(
