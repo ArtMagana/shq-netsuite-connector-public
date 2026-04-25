@@ -3,16 +3,16 @@ import { Router } from 'express'
 import type { PreviewPayload } from '../types.js'
 
 type BasicRoutesDependencies = {
-  overview: unknown
-  auditItems: unknown
-  defaultRules: unknown
-  ruleDefinitions: unknown
-  firstProductionPolicy: unknown
-  labRules: unknown
-  exampleScenarios: unknown
-  receipts: unknown
-  invoices: unknown
-  previewReconciliation: (payload: PreviewPayload) => unknown
+  overview: any
+  auditItems: any
+  defaultRules: any
+  ruleDefinitions: any
+  firstProductionPolicy: any
+  labRules: any
+  exampleScenarios: any
+  receipts: any
+  invoices: any
+  previewReconciliation: (payload: PreviewPayload) => any
 }
 
 export function createBasicRoutes({
@@ -89,3 +89,5 @@ export function createBasicRoutes({
 
   return router
 }
+
+
