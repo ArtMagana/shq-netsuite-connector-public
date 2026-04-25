@@ -1,6 +1,8 @@
 import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
 import { logBancosServiceEvent } from './bancosLogger.js'
 
+export type BancosAnalysisStartRequest = Parameters<typeof startBankImportAnalysisRunCore>[0]
+
 export type BancosServiceResult<T> =
   | { success: true; data: T }
   | { success: false; error: string }
