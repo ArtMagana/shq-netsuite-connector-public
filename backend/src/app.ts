@@ -196,7 +196,7 @@ export function createApp() {
   app.use(express.json({ limit: getJsonBodyLimit() }))
 
   app.use('/api/bancos', createBancosRoutes({ getBankImportConfig, BankImportError }))
-  app.use('/api/inventario', createInventarioRoutes())
+  app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError }))
 
   app.use('/api', createBasicRoutes({
     overview,
@@ -309,17 +309,6 @@ export function createApp() {
       const status = error instanceof InventoryLotReplacementError ? error.status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory lot replacement error.',
-      })
-    }
-  })
-
-  app.post('/api/inventario/certificados/lookup', async (request, response) => {
-    try {
-      response.json(await lookupInventoryCertificate(request.body))
-    } catch (error) {
-      const status = error instanceof InventoryCertificateError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown inventory certificate lookup error.',
       })
     }
   })
