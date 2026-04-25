@@ -4,7 +4,7 @@ function getErrorStatus(error: unknown) {
   return error instanceof Error && 'status' in error ? Number(error.status) : 503
 }
 
-export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, executeInventoryAdjustment, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, requireInternalApiKey, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }: any) {
+export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, executeInventoryAdjustment, executeInventoryLotReplacement, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, requireInternalApiKey, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotReplacementError, InventoryLotSummaryError }: any) {
   const router = Router()
 
 
@@ -13,6 +13,19 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
 
 
 
+
+
+  router.post('/ajustes/reemplazar-lote', requireInternalApiKey, async (request, response) => {
+    try {
+      const client = NetSuiteClient.fromEnv()
+      response.json(await executeInventoryLotReplacement(client, request.body))
+    } catch (error) {
+      const status = getErrorStatus(error)
+      response.status(status).json({
+        error: error instanceof Error ? error.message : 'Unknown inventory lot replacement error.',
+      })
+    }
+  })
 
   router.post('/ajustes/execute', requireInternalApiKey, async (request, response) => {
     try {
