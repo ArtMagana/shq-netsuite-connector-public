@@ -194,7 +194,7 @@ export function createApp() {
   )
   app.use(express.json({ limit: getJsonBodyLimit() }))
 
-  app.use('/api/bancos', createBancosRoutes({ getBankImportConfig, BankImportError }))
+  app.use('/api/bancos', createBancosRoutes({ analyzeBankImport, getBankImportConfig, BankImportError }))
   app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError }))
 
   app.use('/api', createBasicRoutes({
@@ -209,17 +209,6 @@ export function createApp() {
     invoices,
     previewReconciliation,
   }))
-
-  app.post('/api/bancos/analyze', async (request, response) => {
-    try {
-      response.json(await analyzeBankImport(request.body))
-    } catch (error) {
-      const status = error instanceof BankImportError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown bank import error.',
-      })
-    }
-  })
 
   app.post('/api/bancos/analysis/start', requireInternalApiKey, (request, response) => {
     try {
