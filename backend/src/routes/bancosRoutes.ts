@@ -1,4 +1,4 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 
 function getErrorStatus(error: unknown) {
@@ -21,7 +21,7 @@ export function createBancosRoutes(deps: any) {
   })
 
 
-  router.post('/analysis/start, requireInternalApiKey, (request, response) => {
+  router.post('/analysis/start', requireInternalApiKey, (request, response) => {
   try {
     response.json(startBankImportAnalysisRun(request.body))
   } catch (error) {
@@ -45,4 +45,5 @@ export function createBancosRoutes(deps: any) {
 
   return router
 }
+
 
