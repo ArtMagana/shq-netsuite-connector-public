@@ -8,7 +8,7 @@ export function createBancosRoutes(deps: any) {
     try {
       response.json(await analyzeBankImport(request.body))
     } catch (error) {
-      const status = error instanceof BankImportError ? error.status : 503
+      const status = getErrorStatus(error)
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown bank import error.',
       })
@@ -20,7 +20,7 @@ export function createBancosRoutes(deps: any) {
     try {
       response.json(getBankImportConfig())
     } catch (error: any) {
-      const status = error instanceof BankImportError ? error.status : 503
+      const status = getErrorStatus(error)
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown bank config error.',
       })
@@ -29,4 +29,6 @@ export function createBancosRoutes(deps: any) {
 
   return router
 }
+
+
 
