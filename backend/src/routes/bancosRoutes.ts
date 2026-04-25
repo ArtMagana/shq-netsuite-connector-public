@@ -65,14 +65,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   router.post('/analysis/start', requireInternalApiKey, validateBody(isBancosAnalysisStartRequest, 'La solicitud de analisis bancario no es valida.'), handleAnalysisStart)
 
   function handleConfig(_request: Request, response: Response) {
-    try {
-      response.json(getBankImportConfig())
-    } catch (error) {
-      const status = getErrorStatus(error)
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown bank config error.',
-      })
-    }
+    response.json(getBankImportConfig())
   }
 
   router.get('/config', handleConfig)
