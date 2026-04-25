@@ -196,7 +196,7 @@ export function createApp() {
   app.use(express.json({ limit: getJsonBodyLimit() }))
 
   app.use('/api/bancos', createBancosRoutes({ getBankImportConfig, BankImportError }))
-  app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError }))
+  app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }))
 
   app.use('/api', createBasicRoutes({
     overview,
@@ -210,48 +210,6 @@ export function createApp() {
     invoices,
     previewReconciliation,
   }))
-
-  app.get('/api/inventario/ajustes/items/:itemId/snapshot', async (request, response) => {
-    try {
-      const client = NetSuiteClient.fromEnv()
-      response.json(
-        await fetchInventoryAdjustmentItemSnapshot(
-          client,
-          String(request.params.itemId ?? ''),
-          request.query.locationId,
-        ),
-      )
-    } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown inventory snapshot error.',
-      })
-    }
-  })
-
-  app.post('/api/inventario/ajustes/lote-resumen', async (request, response) => {
-    try {
-      const client = NetSuiteClient.fromEnv()
-      response.json(await fetchInventoryLotSummary(client, request.body))
-    } catch (error) {
-      const status = error instanceof InventoryLotSummaryError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown inventory lot summary error.',
-      })
-    }
-  })
-
-  app.post('/api/inventario/ajustes/preview', async (request, response) => {
-    try {
-      const client = NetSuiteClient.fromEnv()
-      response.json(await previewInventoryAdjustment(client, request.body))
-    } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown inventory preview error.',
-      })
-    }
-  })
 
   app.post('/api/inventario/ajustes/execute', requireInternalApiKey, async (request, response) => {
     try {
