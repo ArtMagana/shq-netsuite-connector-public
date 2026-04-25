@@ -13,7 +13,7 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
       const client = NetSuiteClient.fromEnv()
       response.json(await fetchInventoryLotSummary(client, request.body))
     } catch (error) {
-      const status = error instanceof InventoryLotSummaryError ? error.status : 503
+      const status = error instanceof InventoryLotSummaryError ? (error as any).status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory lot summary error.',
       })
@@ -31,7 +31,7 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
         ),
       )
     } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
+      const status = error instanceof InventoryAdjustmentError ? (error as any).status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory snapshot error.',
       })
@@ -43,7 +43,7 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
       const client = NetSuiteClient.fromEnv()
       response.json(await searchInventoryAdjustmentAccounts(client, request.query.query, request.query.limit))
     } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
+      const status = error instanceof InventoryAdjustmentError ? (error as any).status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory account search error.',
       })
@@ -55,7 +55,7 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
       const client = NetSuiteClient.fromEnv()
       response.json(await searchInventoryAdjustmentItems(client, request.query.query, request.query.limit))
     } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
+      const status = error instanceof InventoryAdjustmentError ? (error as any).status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory item search error.',
       })
@@ -67,7 +67,7 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
       const client = NetSuiteClient.fromEnv()
       response.json(await fetchInventoryAdjustmentBootstrap(client))
     } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
+      const status = error instanceof InventoryAdjustmentError ? (error as any).status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory adjustments bootstrap error.',
       })
@@ -78,7 +78,7 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
     try {
       response.json(await lookupInventoryCertificate(request.body))
     } catch (error) {
-      const status = error instanceof InventoryCertificateError ? error.status : 503
+      const status = error instanceof InventoryCertificateError ? (error as any).status : 503
       response.status(status).json({
         error: error instanceof Error ? error.message : 'Unknown inventory certificate lookup error.',
       })
@@ -87,3 +87,4 @@ export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCe
 
   return router
 }
+
