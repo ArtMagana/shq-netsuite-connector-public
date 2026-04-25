@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
-import type { BancosServiceResult } from '../services/bancosService.js'
+import type { BancosAnalysisStartRequest, BancosServiceResult } from '../services/bancosService.js'
 
 function getErrorStatus(error: unknown) {
   return error instanceof Error && 'status' in error ? Number(error.status) : 503
@@ -9,7 +9,7 @@ function getErrorStatus(error: unknown) {
 
 type BancosRouteDeps = {
   analyzeBankImport: (body: any) => Promise<any>
-  startBankImportAnalysisRun: (body: any) => BancosServiceResult<any>
+  startBankImportAnalysisRun: (body: BancosAnalysisStartRequest) => BancosServiceResult<any>
   getBankImportConfig: () => any
   BankImportError: any
 }
@@ -31,7 +31,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
 
   function handleAnalysisStart(request: Request, response: Response) {
     try {
-      const result = startBankImportAnalysisRun(request.body)
+      const result = startBankImportAnalysisRun(request.body as BancosAnalysisStartRequest)
 
       if (!result.success) {
         response.status(400).json(result)
