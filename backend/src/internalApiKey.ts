@@ -1,4 +1,4 @@
-﻿import type { NextFunction, Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 
 const INTERNAL_API_KEY_HEADER = 'x-internal-api-key'
 

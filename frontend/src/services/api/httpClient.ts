@@ -1,4 +1,4 @@
-﻿export class HttpClientError extends Error {
+export class HttpClientError extends Error {
   readonly status: number
 
   readonly body?: string
