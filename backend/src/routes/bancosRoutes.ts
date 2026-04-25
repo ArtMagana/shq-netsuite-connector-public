@@ -16,6 +16,7 @@ function getErrorStatus(error: unknown): number {
 }
 
 type BancosAnalyzeRequestBody = Parameters<typeof AnalyzeBankImportFn>[0]
+type BancosAnalyzeResponseBody = Awaited<ReturnType<typeof AnalyzeBankImportFn>>
 
 type BancosRouteDeps = {
   analyzeBankImport: typeof AnalyzeBankImportFn
@@ -30,7 +31,8 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
 
   async function handleAnalyze(request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) {
     try {
-      response.json(await analyzeBankImport(request.body))
+      const result: BancosAnalyzeResponseBody = await analyzeBankImport(request.body)
+      response.json(result)
     } catch (error) {
       const status = getErrorStatus(error)
       response.status(status).json({
