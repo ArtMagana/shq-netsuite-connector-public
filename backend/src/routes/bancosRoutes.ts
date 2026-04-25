@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 
 export function createBancosRoutes(deps: any) {
   const {
