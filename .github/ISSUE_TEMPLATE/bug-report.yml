@@ -1,0 +1,67 @@
+name: Bug report
+description: Reportar un problema funcional o tecnico del proyecto
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Donde ocurre el problema
+      options:
+        - Bancos
+        - NetSuite posting
+        - NetSuite sweep
+        - Homologaciones
+        - Frontend
+        - Backend
+        - Preview local
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Entorno
+      description: Por ejemplo local, preview, GitHub Actions
+      placeholder: local
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumen
+      description: Que esta fallando
+      placeholder: Describe el problema de forma concreta
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: Incluye ruta, archivo, fecha de corte o entidad si aplica
+      placeholder: |
+        1. Abrir ...
+        2. Cargar ...
+        3. Ver ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+      placeholder: Que debio haber pasado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado actual
+      placeholder: Que paso realmente
+    validations:
+      required: true
+  - type: textarea
+    id: accounting-impact
+    attributes:
+      label: Impacto contable u operativo
+      description: Monto, banco, tipo de transaccion o riesgo si aplica
+      placeholder: Impacto observado
+

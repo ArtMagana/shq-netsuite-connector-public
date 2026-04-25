@@ -1,0 +1,57 @@
+name: Regla contable
+description: Alta o ajuste de una regla contable, homologacion o excepcion bancaria
+title: "[Regla] "
+labels:
+  - accounting-rule
+body:
+  - type: dropdown
+    id: bank
+    attributes:
+      label: Banco
+      options:
+        - Payana
+        - Clara
+        - Otro
+    validations:
+      required: true
+  - type: input
+    id: transaction-type
+    attributes:
+      label: Tipo de transaccion
+      placeholder: Cobro, Pago, Anticipo, Nomina, Retiro
+    validations:
+      required: true
+  - type: input
+    id: counterparty
+    attributes:
+      label: Contraparte o patron
+      placeholder: Nombre banco, proveedor, cliente o patron a detectar
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: Regla deseada
+      description: Explica debito, credito, entidad, hoja de equivalencia o excepcion
+      placeholder: |
+        Debito:
+        Credito:
+        Entidad debito:
+        Entidad credito:
+        Persistencia:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencia
+      description: Adjunta capturas, referencias de NetSuite o archivos de ejemplo
+      placeholder: Describe la evidencia disponible
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterio de aceptacion
+      placeholder: Como sabremos que quedo bien
+    validations:
+      required: true
+

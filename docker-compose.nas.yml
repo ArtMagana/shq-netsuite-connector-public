@@ -1,0 +1,17 @@
+services:
+  netsuite-recon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netsuite-recon
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./deploy/nas/netsuite-recon.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+    volumes:
+      - ./deploy/nas/data:/app/data
+      - ./deploy/nas/config:/app/config:ro

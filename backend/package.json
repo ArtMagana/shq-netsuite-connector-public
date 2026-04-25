@@ -1,0 +1,33 @@
+{
+  "name": "netsuite-recon-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "predev": "npm run build",
+    "dev": "npm run start",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.99",
+    "@nodecfdi/sat-ws-descarga-masiva": "^2.0.0",
+    "@xmldom/xmldom": "^0.9.10",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.6.205",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.12.2",
+    "typescript": "~6.0.2"
+  }
+}

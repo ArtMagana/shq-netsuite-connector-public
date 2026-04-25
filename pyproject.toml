@@ -1,0 +1,5 @@
+[project]
+name = "netsuite-ar-recon"
+version = "0.1.0"
+description = "API-driven reconciliation service for NetSuite receivables workflows."
+requires-python = ">=3.13"

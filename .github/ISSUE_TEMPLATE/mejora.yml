@@ -1,0 +1,41 @@
+name: Mejora
+description: Solicitud de mejora funcional o tecnica
+title: "[Mejora] "
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Bancos
+        - NetSuite
+        - Frontend
+        - Backend
+        - CI/CD
+        - Documentacion
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema actual
+      placeholder: Que esta limitando el flujo hoy
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+      placeholder: Que te gustaria agregar o cambiar
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Valor esperado
+      placeholder: Beneficio operativo, contable o tecnico
+    validations:
+      required: true
+

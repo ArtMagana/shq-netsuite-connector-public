@@ -1,0 +1,17 @@
+{
+  "name": "netsuite-connector-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "install:frontend": "npm --prefix frontend install",
+    "install:backend": "npm --prefix backend install",
+    "preinstall:all": "npm run install:backend",
+    "install:all": "npm run install:frontend",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "prebuild": "npm --prefix backend run build",
+    "build": "npm --prefix frontend run build",
+    "prelint": "npm --prefix backend run lint",
+    "lint": "npm --prefix frontend run lint"
+  }
+}
