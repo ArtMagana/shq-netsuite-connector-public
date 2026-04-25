@@ -129,6 +129,7 @@ import {
 } from './reconciliationEngine.js'
 import { createBasicRoutes } from './routes/basicRoutes.js'
 import { createBancosRoutes } from './routes/bancosRoutes.js'
+import { createInventarioRoutes } from './routes/inventarioRoutes.js'
 import { NetSuiteClient } from './netsuiteClient.js'
 import { ruleDefinitions } from './ruleDefinitions.js'
 import { getJsonBodyLimit, LARGE_JSON_BODY_LIMIT, resolveCorsOptions } from './runtimeSecurity.js'
