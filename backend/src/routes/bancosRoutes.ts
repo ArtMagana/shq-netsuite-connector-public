@@ -21,7 +21,7 @@ export function createBancosRoutes(deps: any) {
   })
 
 
-router.post('/analysis/start', requireInternalApiKey, (request, response) => {
+  router.post('/analysis/start, requireInternalApiKey, (request, response) => {
   try {
     response.json(startBankImportAnalysisRun(request.body))
   } catch (error) {
