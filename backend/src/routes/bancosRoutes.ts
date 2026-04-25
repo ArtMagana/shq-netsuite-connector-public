@@ -4,8 +4,15 @@ import { requireInternalApiKey } from '../internalApiKey.js'
 import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
 import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServiceResult } from '../services/bancosService.js'
 
-function getErrorStatus(error: unknown) {
-  return error instanceof Error && 'status' in error ? Number(error.status) : 503
+function getErrorStatus(error: unknown): number {
+  if (error && typeof error === 'object' && 'status' in error) {
+    const status = (error as { status?: unknown }).status
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status
+    }
+  }
+
+  return 503
 }
 
 type BancosRouteDeps = {
