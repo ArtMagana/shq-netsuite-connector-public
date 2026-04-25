@@ -15,6 +15,8 @@ function getErrorStatus(error: unknown): number {
   return 503
 }
 
+type BancosAnalyzeRequestBody = Parameters<AnalyzeBankImportFn>[0]
+
 type BancosRouteDeps = {
   analyzeBankImport: typeof AnalyzeBankImportFn
   startBankImportAnalysisRun: (body: BancosAnalysisStartRequest) => BancosServiceResult<BancosAnalysisStartResult>
@@ -26,7 +28,7 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError } = deps
   const router = Router()
 
-  router.post('/analyze', async (request, response) => {
+  router.post('/analyze', async (request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) => {
     try {
       response.json(await analyzeBankImport(request.body))
     } catch (error) {
