@@ -128,6 +128,7 @@ import {
   firstProductionPolicy,
   previewReconciliation,
 } from './reconciliationEngine.js'
+import { createBasicRoutes } from './routes/basicRoutes.js'
 import { NetSuiteClient } from './netsuiteClient.js'
 import { ruleDefinitions } from './ruleDefinitions.js'
 import { getJsonBodyLimit, LARGE_JSON_BODY_LIMIT, resolveCorsOptions } from './runtimeSecurity.js'
@@ -153,7 +154,7 @@ import {
   upsertSatManualProviderHomologation,
 } from './satManualHomologationStore.js'
 import { uploadSatAnalysisInvoiceToNetSuite } from './satNetsuiteUpload.js'
-import type { BankImportBankId, PreviewPayload } from './types.js'
+import type { BankImportBankId } from './types.js'
 
 loadLocalEnv()
 
@@ -179,17 +180,18 @@ app.use(
 )
 app.use(express.json({ limit: getJsonBodyLimit() }))
 
-app.get('/api/health', (_request, response) => {
-  response.json({
-    status: 'ok',
-    service: 'netsuite-recon-backend',
-    timestampUtc: new Date().toISOString(),
-  })
-})
-
-app.get('/api/console/overview', (_request, response) => {
-  response.json(overview)
-})
+app.use('/api', createBasicRoutes({
+  overview,
+  auditItems,
+  defaultRules,
+  ruleDefinitions,
+  firstProductionPolicy,
+  labRules,
+  exampleScenarios,
+  receipts,
+  invoices,
+  previewReconciliation,
+}))
 
 app.get('/api/inventario/ajustes/bootstrap', async (_request, response) => {
   try {
@@ -633,12 +635,6 @@ function resolveBanxicoCepSourceProfileId(bankIdValue: unknown, sourceProfileIdV
   }
 }
 
-app.get('/api/rules/default', (_request, response) => {
-  response.json({
-    rules: defaultRules,
-  })
-})
-
 app.get('/api/entities/:kind', async (request, response) => {
   try {
     response.json(
@@ -731,12 +727,6 @@ app.post('/api/catalogs/netsuite/accounts/import/create', requireInternalApiKey,
   }
 })
 
-app.get('/api/rules/definitions', (_request, response) => {
-  response.json({
-    items: ruleDefinitions,
-  })
-})
-
 app.get('/api/kontempo/status', (_request, response) => {
   response.json(getKontempoStatus())
 })
@@ -756,19 +746,6 @@ app.post('/api/kontempo/import', requireInternalApiKey, async (request, response
       error: error instanceof Error ? error.message : 'Unknown Kontempo import error.',
     })
   }
-})
-
-app.get('/api/reconcile/policy', (_request, response) => {
-  response.json({
-    policy: firstProductionPolicy,
-  })
-})
-
-app.get('/api/reconcile/examples', (_request, response) => {
-  response.json({
-    rules: labRules,
-    examples: exampleScenarios,
-  })
 })
 
 app.get('/api/search/bootstrap', async (_request, response) => {
@@ -805,27 +782,6 @@ app.post('/api/search/transactions', async (request, response) => {
       error: error instanceof Error ? error.message : 'Unknown Search / Find query error.',
     })
   }
-})
-
-app.get('/api/audit', (_request, response) => {
-  response.json({
-    items: auditItems,
-  })
-})
-
-app.post('/api/reconcile/preview', (request, response) => {
-  const payload = request.body as PreviewPayload
-  response.json(previewReconciliation(payload))
-})
-
-app.get('/api/reconcile/demo', (_request, response) => {
-  response.json(
-    previewReconciliation({
-      rules: labRules,
-      receipts,
-      invoices,
-    }),
-  )
 })
 
 app.get('/api/netsuite/ping', async (request, response) => {
