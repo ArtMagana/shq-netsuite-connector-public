@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
+import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
 import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServiceResult } from '../services/bancosService.js'
 
 function getErrorStatus(error: unknown) {
@@ -8,10 +9,10 @@ function getErrorStatus(error: unknown) {
 }
 
 type BancosRouteDeps = {
-  analyzeBankImport: (body: any) => Promise<any>
+  analyzeBankImport: typeof AnalyzeBankImportFn
   startBankImportAnalysisRun: (body: BancosAnalysisStartRequest) => BancosServiceResult<BancosAnalysisStartResult>
-  getBankImportConfig: () => any
-  BankImportError: any
+  getBankImportConfig: typeof GetBankImportConfigFn
+  BankImportError: typeof BankImportErrorCtor
 }
 
 export function createBancosRoutes(deps: BancosRouteDeps) {
