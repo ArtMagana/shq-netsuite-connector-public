@@ -1,5 +1,14 @@
 import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
 
+function logBancosServiceEvent(event: string, data: Record<string, unknown>) {
+  console.info(JSON.stringify({
+    scope: 'bancos.service',
+    event,
+    ...data,
+    timestampUtc: new Date().toISOString(),
+  }))
+}
+
 function normalizeBankImportError(error: unknown): BankImportError {
   if (error instanceof BankImportError) {
     return error
@@ -31,10 +40,17 @@ export function startBankImportAnalysisRun(request: Parameters<typeof startBankI
     const bankId = request.bankId
     const fileName = request.fileName
 
-    console.info(`Bancos analysis start requested | bank=${bankId} | file=${fileName}`)
+    logBancosServiceEvent('analysis_start_requested', {
+      bankId,
+      fileName,
+    })
 
     return startBankImportAnalysisRunCore(request)
   } catch (error) {
+    logBancosServiceEvent('analysis_start_failed', {
+      error: error instanceof Error ? error.message : 'unknown',
+    })
+
     throw normalizeBankImportError(error)
   }
 }
