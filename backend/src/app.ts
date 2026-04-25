@@ -211,18 +211,6 @@ export function createApp() {
     previewReconciliation,
   }))
 
-  app.get('/api/inventario/ajustes/accounts', async (request, response) => {
-    try {
-      const client = NetSuiteClient.fromEnv()
-      response.json(await searchInventoryAdjustmentAccounts(client, request.query.query, request.query.limit))
-    } catch (error) {
-      const status = error instanceof InventoryAdjustmentError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown inventory account search error.',
-      })
-    }
-  })
-
   app.get('/api/inventario/ajustes/items/:itemId/snapshot', async (request, response) => {
     try {
       const client = NetSuiteClient.fromEnv()
