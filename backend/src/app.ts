@@ -196,6 +196,7 @@ export function createApp() {
   app.use(express.json({ limit: getJsonBodyLimit() }))
 
   app.use('/api/bancos', createBancosRoutes({ getBankImportConfig, BankImportError }))
+  app.use('/api/inventario', createInventarioRoutes())
 
   app.use('/api', createBasicRoutes({
     overview,
