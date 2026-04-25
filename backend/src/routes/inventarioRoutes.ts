@@ -4,13 +4,26 @@ function getErrorStatus(error: unknown) {
   return error instanceof Error && 'status' in error ? Number(error.status) : 503
 }
 
-export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }: any) {
+export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotSummaryError }: any) {
   const router = Router()
 
 
 
 
 
+
+
+  router.post('/ajustes/preview', async (request, response) => {
+    try {
+      const client = NetSuiteClient.fromEnv()
+      response.json(await previewInventoryAdjustment(client, request.body))
+    } catch (error) {
+      const status = getErrorStatus(error)
+      response.status(status).json({
+        error: error instanceof Error ? error.message : 'Unknown inventory preview error.',
+      })
+    }
+  })
 
   router.post('/ajustes/lote-resumen', async (request, response) => {
     try {
