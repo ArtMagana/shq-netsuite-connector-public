@@ -5,9 +5,7 @@ function normalizeBankImportError(error: unknown): BankImportError {
     return error
   }
 
-  const message = error instanceof Error
-    ? error.message
-    : 'Unknown bank analysis error.'
+  const message = error instanceof Error ? error.message : 'Unknown bank analysis error.'
 
   return new BankImportError(`No se pudo iniciar el analisis bancario: ${message}`)
 }
