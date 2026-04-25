@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 
 function getErrorStatus(error: unknown) {
