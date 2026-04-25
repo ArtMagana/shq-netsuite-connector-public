@@ -56,6 +56,7 @@ import {
   fetchFacturasAbiertas,
   invalidateFacturasReadAnalysisCache,
 } from './facturas.js'
+import { requireInternalApiKey } from './internalApiKey.js'
 import { loadLocalEnv } from './loadLocalEnv.js'
 import { auditItems, invoices, overview, receipts } from './mockData.js'
 import { getBootstrapQueries, runBootstrapAnalysis } from './netsuiteAnalysis.js'
@@ -268,7 +269,7 @@ app.post('/api/inventario/ajustes/preview', async (request, response) => {
   }
 })
 
-app.post('/api/inventario/ajustes/execute', async (request, response) => {
+app.post('/api/inventario/ajustes/execute', requireInternalApiKey, async (request, response) => {
   try {
     const client = NetSuiteClient.fromEnv()
     response.json(await executeInventoryAdjustment(client, request.body))
@@ -280,7 +281,7 @@ app.post('/api/inventario/ajustes/execute', async (request, response) => {
   }
 })
 
-app.post('/api/inventario/ajustes/reemplazar-lote', async (request, response) => {
+app.post('/api/inventario/ajustes/reemplazar-lote', requireInternalApiKey, async (request, response) => {
   try {
     const client = NetSuiteClient.fromEnv()
     response.json(await executeInventoryLotReplacement(client, request.body))
@@ -325,7 +326,7 @@ app.post('/api/bancos/analyze', async (request, response) => {
   }
 })
 
-app.post('/api/bancos/analysis/start', (request, response) => {
+app.post('/api/bancos/analysis/start', requireInternalApiKey, (request, response) => {
   try {
     response.json(startBankImportAnalysisRun(request.body))
   } catch (error) {
@@ -336,7 +337,7 @@ app.post('/api/bancos/analysis/start', (request, response) => {
   }
 })
 
-app.post('/api/bancos/analysis/recover', (request, response) => {
+app.post('/api/bancos/analysis/recover', requireInternalApiKey, (request, response) => {
   try {
     response.json(recoverBankImportAnalysisRun(request.body))
   } catch (error) {
@@ -358,7 +359,7 @@ app.get('/api/bancos/analysis/:analysisId', (request, response) => {
   }
 })
 
-app.post('/api/bancos/history/upload', async (request, response) => {
+app.post('/api/bancos/history/upload', requireInternalApiKey, async (request, response) => {
   try {
     response.json(await uploadBankHistoricalStatement(request.body))
   } catch (error) {
@@ -383,7 +384,7 @@ app.get('/api/bancos/pagos-individuales', (request, response) => {
   }
 })
 
-app.post('/api/bancos/pagos-individuales/upload', (request, response) => {
+app.post('/api/bancos/pagos-individuales/upload', requireInternalApiKey, (request, response) => {
   try {
     response.json(upsertBankIndividualPaymentFiles(request.body))
   } catch (error) {
@@ -462,7 +463,7 @@ app.get('/api/bancos/candidates', async (request, response) => {
   }
 })
 
-app.post('/api/bancos/corrections', (request, response) => {
+app.post('/api/bancos/corrections', requireInternalApiKey, (request, response) => {
   try {
     response.json(saveBankImportCorrection(request.body))
   } catch (error) {
@@ -473,7 +474,7 @@ app.post('/api/bancos/corrections', (request, response) => {
   }
 })
 
-app.post('/api/bancos/journals/post', async (request, response) => {
+app.post('/api/bancos/journals/post', requireInternalApiKey, async (request, response) => {
   try {
     response.json(await postBankImportJournals(request.body))
   } catch (error) {
@@ -484,7 +485,7 @@ app.post('/api/bancos/journals/post', async (request, response) => {
   }
 })
 
-app.post('/api/bancos/saldo-validado', (request, response) => {
+app.post('/api/bancos/saldo-validado', requireInternalApiKey, (request, response) => {
   try {
     response.json(saveBankImportValidatedBalance(request.body))
   } catch (error) {
@@ -545,7 +546,7 @@ app.post('/api/bancos/cep/lookup', async (request, response) => {
   }
 })
 
-app.post('/api/bancos/cep/details', async (request, response) => {
+app.post('/api/bancos/cep/details', requireInternalApiKey, async (request, response) => {
   try {
     let details = null
     let lastError: unknown = null
@@ -651,7 +652,7 @@ app.get('/api/entities/:kind', async (request, response) => {
   }
 })
 
-app.post('/api/entities/:kind/sync', async (request, response) => {
+app.post('/api/entities/:kind/sync', requireInternalApiKey, async (request, response) => {
   try {
     response.json(await syncNetSuiteEntityCatalog(parseNetSuiteEntityCatalogKind(String(request.params.kind ?? ''))))
   } catch (error) {
@@ -673,7 +674,7 @@ app.get('/api/catalogs/sat/clave-sat', async (_request, response) => {
   }
 })
 
-app.post('/api/catalogs/sat/clave-sat/sync', async (_request, response) => {
+app.post('/api/catalogs/sat/clave-sat/sync', requireInternalApiKey, async (_request, response) => {
   try {
     response.json(await syncClaveSatCatalog())
   } catch (error) {
@@ -695,7 +696,7 @@ app.get('/api/catalogs/netsuite/accounts', async (_request, response) => {
   }
 })
 
-app.post('/api/catalogs/netsuite/accounts/sync', async (_request, response) => {
+app.post('/api/catalogs/netsuite/accounts/sync', requireInternalApiKey, async (_request, response) => {
   try {
     response.json(await syncNetSuiteAccountCatalog())
   } catch (error) {
@@ -717,7 +718,7 @@ app.post('/api/catalogs/netsuite/accounts/import/preview', async (request, respo
   }
 })
 
-app.post('/api/catalogs/netsuite/accounts/import/create', async (request, response) => {
+app.post('/api/catalogs/netsuite/accounts/import/create', requireInternalApiKey, async (request, response) => {
   try {
     response.json(
       await createNetSuiteAccountsFromImport(typeof request.body?.rawText === 'string' ? request.body.rawText : null),
@@ -740,7 +741,7 @@ app.get('/api/kontempo/status', (_request, response) => {
   response.json(getKontempoStatus())
 })
 
-app.post('/api/kontempo/import', async (request, response) => {
+app.post('/api/kontempo/import', requireInternalApiKey, async (request, response) => {
   try {
     const client = NetSuiteClient.fromEnv()
     const payload = await importKontempoSourceFiles(client, {
@@ -889,7 +890,7 @@ app.get('/api/egresos/exact-ready-overview', async (request, response) => {
   }
 })
 
-app.post('/api/egresos/:billInternalId/apply-exact-credit', async (request, response) => {
+app.post('/api/egresos/:billInternalId/apply-exact-credit', requireInternalApiKey, async (request, response) => {
   try {
     const client = NetSuiteClient.fromEnv()
     const result = await applyExactVendorCredit({
@@ -910,7 +911,7 @@ app.post('/api/egresos/:billInternalId/apply-exact-credit', async (request, resp
   }
 })
 
-app.post('/api/egresos/:billInternalId/prepare-exact-journal', async (request, response) => {
+app.post('/api/egresos/:billInternalId/prepare-exact-journal', requireInternalApiKey, async (request, response) => {
   try {
     const billInternalId = String(request.params.billInternalId ?? '')
     const journalInternalId =
@@ -943,7 +944,7 @@ app.post('/api/egresos/:billInternalId/prepare-exact-journal', async (request, r
   }
 })
 
-app.post('/api/egresos/:billInternalId/reconcile-exact-support', async (request, response) => {
+app.post('/api/egresos/:billInternalId/reconcile-exact-support', requireInternalApiKey, async (request, response) => {
   try {
     const billInternalId = String(request.params.billInternalId ?? '')
     const supportInternalId =
@@ -1032,7 +1033,7 @@ app.get('/api/netsuite/archivos/inspect', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/k', async (request, response) => {
+app.post('/api/facturas/apply/k', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1056,7 +1057,7 @@ app.post('/api/facturas/apply/k', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/ppd1', async (request, response) => {
+app.post('/api/facturas/apply/ppd1', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1080,7 +1081,7 @@ app.post('/api/facturas/apply/ppd1', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a1', async (request, response) => {
+app.post('/api/facturas/apply/a1', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1104,7 +1105,7 @@ app.post('/api/facturas/apply/a1', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a2', async (request, response) => {
+app.post('/api/facturas/apply/a2', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1128,7 +1129,7 @@ app.post('/api/facturas/apply/a2', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a3', async (request, response) => {
+app.post('/api/facturas/apply/a3', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1152,7 +1153,7 @@ app.post('/api/facturas/apply/a3', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a4', async (request, response) => {
+app.post('/api/facturas/apply/a4', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1176,7 +1177,7 @@ app.post('/api/facturas/apply/a4', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a5', async (request, response) => {
+app.post('/api/facturas/apply/a5', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1200,7 +1201,7 @@ app.post('/api/facturas/apply/a5', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a6', async (request, response) => {
+app.post('/api/facturas/apply/a6', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1224,7 +1225,7 @@ app.post('/api/facturas/apply/a6', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a7', async (request, response) => {
+app.post('/api/facturas/apply/a7', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1248,7 +1249,7 @@ app.post('/api/facturas/apply/a7', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/a8', async (request, response) => {
+app.post('/api/facturas/apply/a8', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1272,7 +1273,7 @@ app.post('/api/facturas/apply/a8', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/b1', async (request, response) => {
+app.post('/api/facturas/apply/b1', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1296,7 +1297,7 @@ app.post('/api/facturas/apply/b1', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/b2', async (request, response) => {
+app.post('/api/facturas/apply/b2', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1320,7 +1321,7 @@ app.post('/api/facturas/apply/b2', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/b3', async (request, response) => {
+app.post('/api/facturas/apply/b3', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1344,7 +1345,7 @@ app.post('/api/facturas/apply/b3', async (request, response) => {
   }
 })
 
-app.post('/api/facturas/apply/n1', async (request, response) => {
+app.post('/api/facturas/apply/n1', requireInternalApiKey, async (request, response) => {
   try {
     invalidateFacturasReadAnalysisCache()
     const client = NetSuiteClient.fromEnv()
@@ -1400,7 +1401,7 @@ app.get('/api/sat/status', (_request, response) => {
   }
 })
 
-app.post('/api/sat/auth/test', async (_request, response) => {
+app.post('/api/sat/auth/test', requireInternalApiKey, async (_request, response) => {
   try {
     response.json(await runSatAuthenticationTest())
   } catch (error) {
@@ -1411,7 +1412,7 @@ app.post('/api/sat/auth/test', async (_request, response) => {
   }
 })
 
-app.post('/api/sat/cfdi/request', async (request, response) => {
+app.post('/api/sat/cfdi/request', requireInternalApiKey, async (request, response) => {
   try {
     response.json(await createSatCfdiRequest(request.body))
   } catch (error) {
@@ -1494,7 +1495,7 @@ app.get('/api/sat/analysis/windows', (_request, response) => {
   }
 })
 
-app.post('/api/sat/analysis/windows/bootstrap', async (request, response) => {
+app.post('/api/sat/analysis/windows/bootstrap', requireInternalApiKey, async (request, response) => {
   try {
     response.json(
       await bootstrapSatReceivedInvoicesAnalysisWindow({
@@ -1512,7 +1513,7 @@ app.post('/api/sat/analysis/windows/bootstrap', async (request, response) => {
   }
 })
 
-app.post('/api/sat/analysis/windows/:windowId/reconcile', async (request, response) => {
+app.post('/api/sat/analysis/windows/:windowId/reconcile', requireInternalApiKey, async (request, response) => {
   try {
     response.json(await reconcileSatAnalysisWindow(String(request.params.windowId ?? '')))
   } catch (error) {
@@ -1523,7 +1524,7 @@ app.post('/api/sat/analysis/windows/:windowId/reconcile', async (request, respon
   }
 })
 
-app.post('/api/sat/analysis/windows/:windowId/invoices/:uuid/upload', async (request, response) => {
+app.post('/api/sat/analysis/windows/:windowId/invoices/:uuid/upload', requireInternalApiKey, async (request, response) => {
   try {
     response.json(
       await uploadSatAnalysisInvoiceToNetSuite({
@@ -1551,7 +1552,7 @@ app.get('/api/sat/homologation/manual', (_request, response) => {
   }
 })
 
-app.post('/api/sat/homologation/manual/provider', async (request, response) => {
+app.post('/api/sat/homologation/manual/provider', requireInternalApiKey, async (request, response) => {
   try {
     response.json(
       await upsertSatManualProviderHomologation({
@@ -1575,7 +1576,7 @@ app.post('/api/sat/homologation/manual/provider', async (request, response) => {
   }
 })
 
-app.post('/api/sat/homologation/manual/account', async (request, response) => {
+app.post('/api/sat/homologation/manual/account', requireInternalApiKey, async (request, response) => {
   try {
     response.json(
       await upsertSatManualAccountHomologation({
@@ -1685,7 +1686,7 @@ app.get('/api/auth/netsuite/callback', async (request, response) => {
   }
 })
 
-app.post('/api/auth/netsuite/revoke', async (_request, response) => {
+app.post('/api/auth/netsuite/revoke', requireInternalApiKey, async (_request, response) => {
   try {
     const oauthService = NetSuiteOAuthService.fromEnv()
     response.json(await oauthService.revokeStoredSession())
