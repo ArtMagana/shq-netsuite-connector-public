@@ -129,6 +129,7 @@ import {
   previewReconciliation,
 } from './reconciliationEngine.js'
 import { createBasicRoutes } from './routes/basicRoutes.js'
+import { createBancosRoutes } from './routes/bancosRoutes.js'
 import { NetSuiteClient } from './netsuiteClient.js'
 import { ruleDefinitions } from './ruleDefinitions.js'
 import { getJsonBodyLimit, LARGE_JSON_BODY_LIMIT, resolveCorsOptions } from './runtimeSecurity.js'
@@ -179,6 +180,8 @@ app.use(
   express.json({ limit: LARGE_JSON_BODY_LIMIT }),
 )
 app.use(express.json({ limit: getJsonBodyLimit() }))
+
+app.use('/api/bancos', createBancosRoutes())
 
 app.use('/api', createBasicRoutes({
   overview,
