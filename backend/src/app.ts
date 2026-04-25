@@ -128,6 +128,7 @@ import {
 } from './reconciliationEngine.js'
 import { createBasicRoutes } from './routes/basicRoutes.js'
 import { createBancosRoutes } from './routes/bancosRoutes.js'
+import { errorMiddleware } from './routes/errorMiddleware.js'
 import { startBankImportAnalysisRun } from './services/bancosService.js'
 import { createInventarioRoutes } from './routes/inventarioRoutes.js'
 import { NetSuiteClient } from './netsuiteClient.js'
@@ -1599,6 +1600,8 @@ export function createApp() {
       })
     })
   }
+
+  app.use(errorMiddleware)
 
   return app
 }
