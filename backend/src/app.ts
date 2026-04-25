@@ -15,7 +15,6 @@ import {
   saveBankImportCorrection,
   saveBankImportValidatedBalance,
   searchBankImportCandidates,
-  startBankImportAnalysisRun,
   uploadBankHistoricalStatement,
 } from './bankImports.js'
 import {
@@ -129,6 +128,7 @@ import {
 } from './reconciliationEngine.js'
 import { createBasicRoutes } from './routes/basicRoutes.js'
 import { createBancosRoutes } from './routes/bancosRoutes.js'
+import { startBankImportAnalysisRun } from './services/bancosService.js'
 import { createInventarioRoutes } from './routes/inventarioRoutes.js'
 import { NetSuiteClient } from './netsuiteClient.js'
 import { ruleDefinitions } from './ruleDefinitions.js'
