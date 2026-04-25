@@ -129,6 +129,7 @@ import {
 } from './reconciliationEngine.js'
 import { NetSuiteClient } from './netsuiteClient.js'
 import { ruleDefinitions } from './ruleDefinitions.js'
+import { getJsonBodyLimit, LARGE_JSON_BODY_LIMIT, resolveCorsOptions } from './runtimeSecurity.js'
 import {
   createSatCfdiRequest,
   downloadSatCfdiPackageFile,
@@ -165,8 +166,17 @@ const host = process.env.HOST?.trim() || '127.0.0.1'
 const port = Number(process.env.PORT ?? 3001)
 const publicBaseUrl = process.env.APP_PUBLIC_BASE_URL?.trim().replace(/\/+$/, '') || null
 
-app.use(cors())
-app.use(express.json({ limit: '35mb' }))
+app.use(cors(resolveCorsOptions()))
+app.use(
+  [
+    '/api/bancos/analyze',
+    '/api/bancos/analysis/start',
+    '/api/bancos/history/upload',
+    '/api/bancos/pagos-individuales/upload',
+  ],
+  express.json({ limit: LARGE_JSON_BODY_LIMIT }),
+)
+app.use(express.json({ limit: getJsonBodyLimit() }))
 
 app.get('/api/health', (_request, response) => {
   response.json({
