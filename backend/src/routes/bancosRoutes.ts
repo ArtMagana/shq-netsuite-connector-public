@@ -1,7 +1,7 @@
 import { Router } from 'express'
 
 export function createBancosRoutes(deps: any) {
-  const { getBankImportConfig, BankImportError } = deps
+  const { analyzeBankImport, getBankImportConfig, BankImportError } = deps
   const router = Router()
 
   router.post('/analyze', async (request, response) => {
@@ -29,3 +29,4 @@ export function createBancosRoutes(deps: any) {
 
   return router
 }
+
