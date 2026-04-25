@@ -3,7 +3,7 @@ import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
 import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
 import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServiceResult } from '../services/bancosService.js'
-import { isBancosAnalysisStartRequest } from './bancosValidation.js'
+import { isBancosAnalysisStartRequest, isBancosAnalyzeRequest } from './bancosValidation.js'
 
 function getErrorStatus(error: unknown): number {
   if (error && typeof error === 'object' && 'status' in error) {
@@ -30,8 +30,15 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError } = deps
   const router = Router()
 
-  async function handleAnalyze(request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) {
+  async function handleAnalyze(request: Request<unknown, unknown, unknown>, response: Response) {
     try {
+      if (!isBancosAnalyzeRequest(request.body)) {
+        response.status(400).json({
+          error: 'La solicitud de analisis bancario no es valida.',
+        })
+        return
+      }
+
       const result: BancosAnalyzeResponseBody = await analyzeBankImport(request.body)
       response.json(result)
     } catch (error) {
