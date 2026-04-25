@@ -41,9 +41,9 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
 
   router.post('/analyze', handleAnalyze)
 
-  function handleAnalysisStart(request: Request, response: Response) {
+  function handleAnalysisStart(request: Request<unknown, unknown, BancosAnalysisStartRequest>, response: Response) {
     try {
-      const result = startBankImportAnalysisRun(request.body as BancosAnalysisStartRequest)
+      const result = startBankImportAnalysisRun(request.body)
 
       if (!result.success) {
         response.status(400).json(result)
@@ -75,4 +75,3 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
 
   return router
 }
-
