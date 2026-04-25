@@ -28,6 +28,19 @@ type NetSuiteOAuthAuth = {
 const RETRYABLE_STATUS_CODES = new Set([429])
 const MAX_RETRY_ATTEMPTS = 4
 const RETRY_BASE_DELAY_MS = 1200
+const NETSUITE_RESPONSE_PREVIEW_LIMIT = 800
+
+export class NetSuiteHttpError extends Error {
+  readonly statusCode: number
+  readonly responseBodyPreview: string
+
+  constructor(statusCode: number, responseBody: string) {
+    super(`NetSuite HTTP ${statusCode}: upstream response body omitted.`)
+    this.name = 'NetSuiteHttpError'
+    this.statusCode = statusCode
+    this.responseBodyPreview = sanitizeNetSuiteResponsePreview(responseBody)
+  }
+}
 
 export class NetSuiteClient {
   constructor(
@@ -206,7 +219,7 @@ export class NetSuiteClient {
             continue
           }
 
-          throw new Error(`NetSuite HTTP ${response.status}: ${text}`)
+          throw new NetSuiteHttpError(response.status, text)
         }
 
         return {
@@ -308,6 +321,12 @@ export class NetSuiteClient {
 
     return this.auth.credentials
   }
+}
+
+function sanitizeNetSuiteResponsePreview(responseBody: string) {
+  return responseBody
+    .replace(/(["']?(?:access[_-]?token|refresh[_-]?token|token|secret|password|authorization)["']?\s*[:=]\s*)["']?[^"',\s}]+/gi, '$1[redacted]')
+    .slice(0, NETSUITE_RESPONSE_PREVIEW_LIMIT)
 }
 
 function normalizeAuthMode(rawValue?: string): NetSuiteAuthMode {
