@@ -18,6 +18,7 @@ import {
   startBankImportAnalysisRun,
   uploadBankHistoricalStatement,
 } from './bankImports.js'
+import { createBancosRoutes } from './routes/bancosRoutes.js'
 import {
   listBankIndividualPaymentFileMetadata,
   upsertBankIndividualPaymentFiles,
@@ -179,6 +180,8 @@ app.use(
   express.json({ limit: LARGE_JSON_BODY_LIMIT }),
 )
 app.use(express.json({ limit: getJsonBodyLimit() }))
+
+app.use('/api/bancos', createBancosRoutes({ analyzeBankImport, analyzeBankImportSample, getBankImportConfig, getBankImportAnalysisRunStatus, postBankImportJournals, recoverBankImportAnalysisRun, saveBankImportCorrection, saveBankImportValidatedBalance, searchBankImportCandidates, startBankImportAnalysisRun, uploadBankHistoricalStatement, listBankIndividualPaymentFileMetadata, upsertBankIndividualPaymentFiles, getBanxicoCepInstitutions, lookupBanxicoCep, downloadBanxicoCepDetails }))
 
 app.use('/api', createBasicRoutes({
   overview,
