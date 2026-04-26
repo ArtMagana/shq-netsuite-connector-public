@@ -1,0 +1,17 @@
+services:
+  shq-public-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: shq-public-test
+    restart: unless-stopped
+    ports:
+      - "8090:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      APP_PUBLIC_BASE_URL: http://YOUR-NAS-OR-IP:8090
+      ALLOWED_ORIGINS: http://localhost:8090,http://127.0.0.1:8090,http://YOUR-NAS-OR-IP:8090
+      JSON_BODY_LIMIT: 1mb
+      INTERNAL_API_KEY: dummy-public-test-key
