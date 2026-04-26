@@ -1,13 +1,34 @@
+type StructuredErrorBody = {
+  error?: unknown
+  code?: unknown
+}
+
+type HttpClientErrorOptions = {
+  body?: string
+  parsedBody?: unknown
+  errorCode?: string
+  errorMessage?: string
+}
+
 export class HttpClientError extends Error {
   readonly status: number
 
   readonly body?: string
 
-  constructor(message: string, status: number, body?: string) {
+  readonly parsedBody?: unknown
+
+  readonly errorCode?: string
+
+  readonly errorMessage?: string
+
+  constructor(message: string, status: number, options: HttpClientErrorOptions = {}) {
     super(message)
     this.name = 'HttpClientError'
     this.status = status
-    this.body = body
+    this.body = options.body
+    this.parsedBody = options.parsedBody
+    this.errorCode = options.errorCode
+    this.errorMessage = options.errorMessage
   }
 }
 
@@ -37,6 +58,30 @@ function resolveRequestHeaders(headers?: HeadersInit) {
   return resolvedHeaders
 }
 
+function tryParseJsonBody(body: string) {
+  try {
+    return JSON.parse(body) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+function resolveStructuredError(parsedBody: unknown) {
+  if (!parsedBody || typeof parsedBody !== 'object') {
+    return {
+      errorCode: undefined,
+      errorMessage: undefined,
+    }
+  }
+
+  const payload = parsedBody as StructuredErrorBody
+
+  return {
+    errorCode: typeof payload.code === 'string' && payload.code.trim() ? payload.code : undefined,
+    errorMessage: typeof payload.error === 'string' && payload.error.trim() ? payload.error : undefined,
+  }
+}
+
 export function createHttpClient({ baseUrl }: HttpClientOptions) {
   return {
     async request<T>(path: string, options: HttpRequestOptions = {}) {
@@ -48,10 +93,17 @@ export function createHttpClient({ baseUrl }: HttpClientOptions) {
       const body = await response.text()
 
       if (!response.ok) {
+        const parsedBody = body ? tryParseJsonBody(body) : undefined
+        const { errorCode, errorMessage } = resolveStructuredError(parsedBody)
         throw new HttpClientError(
           `Request failed with status ${response.status}.`,
           response.status,
-          body,
+          {
+            body,
+            parsedBody,
+            errorCode,
+            errorMessage,
+          },
         )
       }
 
