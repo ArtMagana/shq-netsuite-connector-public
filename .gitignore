@@ -9,6 +9,8 @@ backend/.sat-cache/
 coverage/
 
 .env
+.env.*
+!**/.env.example
 .env.local
 backend/.env
 backend/.env.local
@@ -17,10 +19,18 @@ frontend/.env.local
 deploy/nas/netsuite-recon.env
 
 *.log
+logs/
 *.tsbuildinfo
 *.pyc
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
 data/
 outputs/
+tmp/
 backend/tmp-*/
 tmp-kontempo-probe.mjs
 backend/tmp-kontempo-probe.mjs
