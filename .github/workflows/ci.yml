@@ -24,10 +24,10 @@ jobs:
             frontend/package-lock.json
 
       - name: Install backend dependencies
-        run: npm --prefix backend install
+        run: npm --prefix backend ci
 
       - name: Install frontend dependencies
-        run: npm --prefix frontend install
+        run: npm --prefix frontend ci
 
       - name: Lint
         run: npm run lint
