@@ -8,7 +8,7 @@ export type BancosAnalysisStartRequest = Parameters<typeof startBankImportAnalys
 
 export type BancosServiceResult<T> =
   | { success: true; data: T }
-  | { success: false; error: string }
+  | { success: false; error: string; code: string }
 
 function success<T>(data: T): BancosServiceResult<T> {
   return {
@@ -21,6 +21,7 @@ function failure<T>(error: AppError): BancosServiceResult<T> {
   return {
     success: false,
     error: error.message,
+    code: error.code,
   }
 }
 
