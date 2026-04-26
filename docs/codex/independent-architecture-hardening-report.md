@@ -6,7 +6,22 @@
 - `main` no fue modificado y no se hizo merge.
 - El PR #81 sigue en draft.
 - La rama ya contiene una pasada de hardening incremental, con cambios pequenos y revisables por commit.
+- El repo publico ya se uso como laboratorio tecnico aislado en NAS sin tocar el repo privado.
+- La instancia `shq-public-test` levanto correctamente en `8090` despues de corregir un bug real de wiring en `inventario`.
 - No se ejecutaron integraciones reales contra NetSuite, SAT, Banxico, bancos, NAS ni otros servicios externos.
+
+## Nota de laboratorio aislado
+
+- Se levanto una instancia publica separada en `/volume1/docker/shq-public-test`.
+- El contenedor `shq-public-test` publico `8090 -> 3000`.
+- El healthcheck `curl http://127.0.0.1:8090/api/health` respondio OK.
+- `supplai-app-1` en `8088` quedo intacto.
+- `netsuite-recon` en `3000` quedo intacto.
+- Durante esa prueba se detecto un fallo de arranque real:
+  - `createInventarioRoutes(...)` usaba dependencias que `app.ts` no estaba inyectando
+  - el build pasaba, pero el contenedor fallaba al registrar rutas
+  - se corrigio en esta rama con `fix: restore inventario route dependencies`
+- La prueba aislada valido el enfoque de usar el repo publico como laboratorio sin tocar el privado ni produccion.
 
 ## Auditoria inicial
 
@@ -77,6 +92,7 @@ Resultado de arranque:
 
 - CI sigue usando `npm --prefix backend ci` y `npm --prefix frontend ci`.
 - CI ahora ejecuta `python3 tools/check-text-encoding.py`.
+- CI ahora tambien ejecuta `npm test` despues del build para correr la cobertura minima de seguridad.
 - El ultimo GitHub Actions CI del PR esta en verde.
 - Se agrego `tools/check-text-encoding.py` para detectar:
   - BOM
@@ -99,6 +115,13 @@ Resultado de arranque:
   - `INTERNAL_API_KEY_INVALID`
 - Esto endurece el contrato para una app interna, pero no sustituye autenticacion enterprise real.
 - `VITE_INTERNAL_API_KEY` en frontend no debe considerarse un secreto fuerte; es solo un mecanismo de conveniencia interna.
+
+### Seguridad de wiring en routers
+
+- `backend/src/routes/inventarioRoutes.ts` ya no recibe `deps: any`.
+- `backend/src/routes/basicRoutes.ts` ya no usa `any` para sus dependencias principales.
+- El wiring de `inventario` en `backend/src/app.ts` quedo alineado con las dependencias realmente usadas por el router.
+- Esto baja el riesgo de que otro `undefined` compile y solo reviente al arrancar el contenedor.
 
 ### Revision de consistencia de errores
 
@@ -143,6 +166,19 @@ Resultado de arranque:
   - preferir `getHttpErrorMessage(...)` para mensajes de fallback
   - preferir `getHttpErrorCode(...)` para estados de error orientados por `code`
 
+### Testing minimo ya habilitado
+
+- Se agrego una base minima de `node:test` en `tests/backend-safety.test.mjs`.
+- Esa suite cubre:
+  - `isBancosAnalyzeRequest(...)`
+  - `isBancosAnalysisStartRequest(...)`
+  - `validateBody(...)`
+  - `requireInternalApiKey(...)`
+- La suite corre sobre `backend/dist` despues del build, sin tocar integraciones reales.
+- Se agrego el script root `npm test`.
+- CI ahora ejecuta esa suite despues del build.
+- La cobertura sigue siendo pequena a proposito; la meta aqui es detectar regresiones obvias de contratos y middleware sin meter un framework grande todavia.
+
 ### Guardrails preventivos para archivos sensibles
 
 - `.gitignore` ahora cubre mejor:
@@ -179,7 +215,7 @@ Estado de validacion al momento de esta actualizacion:
 
 - `backend/src/app.ts` sigue siendo el principal punto de concentracion y conflicto potencial.
 - Todavia existen rutas legacy que devuelven solo `{ error }` sin `code`.
-- `basicRoutes.ts` sigue usando `any`.
+- Aunque `basicRoutes.ts` e `inventarioRoutes.ts` ya tipan mejor sus deps, aun quedan contratos de route wiring que dependen de convenciones manuales fuera de esos routers.
 - `internalApiKey.ts` ya tiene `code`, pero el resto del backend no esta estandarizado todavia.
 - `analysis/recover` y `analysis/:analysisId` siguen con contrato legacy por decision deliberada de no romper clientes.
 - La divergencia de runtime sigue abierta:
@@ -231,24 +267,26 @@ Motivo:
 
 Infraestructura observada:
 
-- no hay script `test` en `package.json`
+- ya existe `tests/test_engine.py` para el motor Python
+- ahora existe `npm test` con `node:test` para smoke tests JS sobre `backend/dist`
 - no hay `vitest`
 - no hay `jest`
 - no hay `tsx`
 - no hay `ts-node`
-- no se detecto un runner de tests listo para usar sin cambios adicionales
 
 Recomendacion pragmatica:
 
-- primera opcion recomendada: `node:test` con archivos pequenos fuera del flujo principal y sin framework grande
-- segunda opcion, si se acepta una dependencia minima futura: `tsx` para ejecutar tests TypeScript pequenos con `node:test`
+- mantener `node:test` para pruebas pequenas de contratos y middleware
+- preservar `python -m unittest tests/test_engine.py` para el motor Python existente
+- evaluar `tsx` mas adelante solo si hace falta testear TypeScript de frontend o backend sin pasar por `dist`
 
 Primeros archivos a cubrir:
 
-1. `backend/src/routes/bancosValidation.ts`
-2. `backend/src/routes/validationMiddleware.ts`
-3. `backend/src/internalApiKey.ts`
-4. `tools/check-text-encoding.py`
+1. ampliar la suite actual de `backend/src/routes/bancosValidation.ts`
+2. ampliar la suite actual de `backend/src/routes/validationMiddleware.ts`
+3. ampliar la suite actual de `backend/src/internalApiKey.ts`
+4. sumar `backend/src/routes/bancosRoutes.ts`
+5. sumar `tools/check-text-encoding.py`
 
 Casos minimos sugeridos:
 
@@ -260,11 +298,12 @@ Casos minimos sugeridos:
 
 Comandos propuestos para una fase futura:
 
-- opcion sin framework grande:
+- baseline actual:
   - `npm --prefix backend run build`
-  - `node --test backend/test/**/*.test.mjs`
+  - `npm test`
+  - `python -m unittest tests/test_engine.py`
 - opcion con dependencia minima futura:
-  - `tsx --test backend/test/**/*.test.ts`
+  - `tsx --test tests/**/*.test.ts`
 
 ## Mapa de arquitectura del backend
 
@@ -289,6 +328,29 @@ Orden recomendado para seguir reduciendo `app.ts`:
 3. continuar con `inventario` donde ya hay separacion previa
 4. atacar contratos de error comunes antes de mover dominios mas sensibles
 5. dejar SAT, NetSuite, egresos y facturas para fases con mas pruebas y aislamiento
+
+## Fase de laboratorio posterior a auditoria Claude
+
+Documentos nuevos o actualizados en esta fase:
+
+- `docs/deploy/public-test-instance.md`
+- `docs/codex/claude-audit-triage.md`
+- `docs/codex/testing-plan.md`
+- `docs/codex/file-store-reliability-plan.md`
+- `docs/codex/runtime-validation-plan.md`
+- `docs/codex/error-contract-roadmap.md`
+- `docs/codex/token-vault-design.md`
+- `docs/codex/csrf-threat-model.md`
+- `docs/codex/env-validation-plan.md`
+- `docs/codex/frontend-premium-plan.md`
+
+Conclusiones de esta fase:
+
+- El repo publico ya funciona como laboratorio tecnico real, no solo como PR documental.
+- La prueba aislada en NAS encontro un bug de arranque que el build no detectaba.
+- El tipado de deps en routers y la base minima de `node:test` reducen el riesgo de repetir ese patron.
+- La auditoria de Claude quedo aterrizada en PRs futuros concretos en vez de intentar un mega-refactor.
+- La recomendacion sigue siendo mantener este PR en draft y decidir siguientes pasos como PRs atomicos.
 
 ## Riesgos de merge
 

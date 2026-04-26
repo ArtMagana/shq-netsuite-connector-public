@@ -261,6 +261,26 @@ Variables que pueden quedarse vacias o sin configurar para una prueba de UI y `h
 - no hay secretos en archivos nuevos
 - no hay certificados ni XML reales agregados
 
+## Resultado de prueba real en NAS
+
+Resultado observado con la instancia aislada levantada desde esta rama:
+
+- carpeta usada: `/volume1/docker/shq-public-test`
+- contenedor: `shq-public-test`
+- puerto publicado: `8090 -> 3000`
+- healthcheck probado: `curl http://127.0.0.1:8090/api/health`
+- campos minimos esperados en la respuesta: `{ "status": "ok", "service": "netsuite-recon-backend" }`
+- nota: el endpoint real tambien incluye `timestampUtc`
+- `supplai-app-1` en `8088` quedo intacto
+- `netsuite-recon` en `3000` quedo intacto
+
+Hallazgo real detectado durante la prueba:
+
+- `docker build` terminaba bien, pero el contenedor caia en restart loop al arrancar
+- la causa fue un wiring incompleto de `createInventarioRoutes(...)` en `backend/src/app.ts`
+- el fix quedo documentado y aplicado en esta rama con `fix: restore inventario route dependencies`
+- la prueba aislada sirvio para detectar y corregir el bug sin tocar el repo privado ni produccion
+
 ## Comandos utiles para comprobar que no se toco la instancia actual
 
 ### Windows / PowerShell
