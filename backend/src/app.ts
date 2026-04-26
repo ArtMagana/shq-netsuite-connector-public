@@ -195,7 +195,7 @@ export function createApp() {
   )
   app.use(express.json({ limit: getJsonBodyLimit() }))
 
-  app.use('/api/bancos', createBancosRoutes({ analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError }))
+  app.use('/api/bancos', createBancosRoutes({ analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig }))
   app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError }))
 
   app.use('/api', createBasicRoutes({

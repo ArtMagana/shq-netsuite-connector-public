@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { requireInternalApiKey } from '../internalApiKey.js'
-import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn, BankImportError as BankImportErrorCtor } from '../bankImports.js'
+import type { analyzeBankImport as AnalyzeBankImportFn, getBankImportConfig as GetBankImportConfigFn } from '../bankImports.js'
 import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServiceResult } from '../services/bancosService.js'
 import { isBancosAnalysisStartRequest, isBancosAnalyzeRequest } from './bancosValidation.js'
 import { validateBody } from './validationMiddleware.js'
@@ -24,11 +24,10 @@ type BancosRouteDeps = {
   analyzeBankImport: typeof AnalyzeBankImportFn
   startBankImportAnalysisRun: (body: BancosAnalysisStartRequest) => BancosServiceResult<BancosAnalysisStartResult>
   getBankImportConfig: typeof GetBankImportConfigFn
-  BankImportError: typeof BankImportErrorCtor
 }
 
 export function createBancosRoutes(deps: BancosRouteDeps) {
-  const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError } = deps
+  const { analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig } = deps
   const router = Router()
 
   async function handleAnalyze(request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) {
