@@ -15,6 +15,7 @@ import { validateBody } from './validationMiddleware.js'
 
 type BancosAnalyzeRequestBody = Parameters<typeof AnalyzeBankImportFn>[0]
 type BancosAnalyzeResponseBody = Awaited<ReturnType<typeof AnalyzeBankImportFn>>
+type BancosAnalysisRecoverRequestBody = Parameters<typeof RecoverBankImportAnalysisRunFn>[0]
 type BancosAnalysisRecoverResponseBody = ReturnType<typeof RecoverBankImportAnalysisRunFn>
 type BancosAnalysisStatusResponseBody = ReturnType<typeof GetBankImportAnalysisRunStatusFn>
 
@@ -79,7 +80,10 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
     handleAnalysisStart,
   )
 
-  function handleAnalysisRecover(request: Request<unknown, unknown, BancosAnalysisStartRequest>, response: Response) {
+  function handleAnalysisRecover(
+    request: Request<unknown, unknown, BancosAnalysisRecoverRequestBody>,
+    response: Response,
+  ) {
     try {
       const result: BancosAnalysisRecoverResponseBody = recoverBankImportAnalysisRun(request.body)
       response.json(result)

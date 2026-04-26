@@ -113,11 +113,15 @@ o
 - Payload esperado:
   - el router no valida el body
   - el body se reenvia a `recoverBankImportAnalysisRun(request.body)`
+  - hoy la funcion downstream acepta el mismo shape base que `analysis/start`, pero esa precondicion no se valida en el borde HTTP
 - Respuesta exitosa:
   - devuelve el JSON resuelto por `recoverBankImportAnalysisRun(request.body)`
 - Respuesta de error de autenticacion:
   - status `401` o `503`
   - body con `error` y `code`
+  - codigos confirmados:
+    - `INTERNAL_API_KEY_INVALID`
+    - `INTERNAL_API_KEY_MISSING`
 - Respuesta de error de dominio:
   - mantiene el contrato legacy actual
   - status `error.status` cuando el error es `BankImportError`, en otro caso `503`
