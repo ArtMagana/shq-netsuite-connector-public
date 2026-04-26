@@ -98,21 +98,17 @@ import {
   executeInventoryAdjustment,
   fetchInventoryAdjustmentBootstrap,
   fetchInventoryAdjustmentItemSnapshot,
-  InventoryAdjustmentError,
   previewInventoryAdjustment,
   searchInventoryAdjustmentAccounts,
   searchInventoryAdjustmentItems,
 } from './inventoryAdjustments.js'
 import {
   fetchInventoryLotSummary,
-  InventoryLotSummaryError,
 } from './inventoryLotSummary.js'
 import {
   executeInventoryLotReplacement,
-  InventoryLotReplacementError,
 } from './inventoryLotReplacement.js'
 import {
-  InventoryCertificateError,
   lookupInventoryCertificate,
 } from './inventoryCertificates.js'
 import {
@@ -205,7 +201,6 @@ export function createApp() {
   }))
   app.use('/api/inventario', createInventarioRoutes({
     lookupInventoryCertificate,
-    InventoryCertificateError,
     NetSuiteClient,
     executeInventoryAdjustment,
     executeInventoryLotReplacement,
@@ -216,9 +211,6 @@ export function createApp() {
     requireInternalApiKey,
     searchInventoryAdjustmentAccounts,
     searchInventoryAdjustmentItems,
-    InventoryAdjustmentError,
-    InventoryLotReplacementError,
-    InventoryLotSummaryError,
   }))
 
   app.use('/api', createBasicRoutes({

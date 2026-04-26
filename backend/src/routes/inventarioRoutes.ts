@@ -1,19 +1,50 @@
 import { Router } from 'express'
+import type { requireInternalApiKey as RequireInternalApiKeyFn } from '../internalApiKey.js'
+import type {
+  executeInventoryAdjustment as ExecuteInventoryAdjustmentFn,
+  fetchInventoryAdjustmentBootstrap as FetchInventoryAdjustmentBootstrapFn,
+  fetchInventoryAdjustmentItemSnapshot as FetchInventoryAdjustmentItemSnapshotFn,
+  previewInventoryAdjustment as PreviewInventoryAdjustmentFn,
+  searchInventoryAdjustmentAccounts as SearchInventoryAdjustmentAccountsFn,
+  searchInventoryAdjustmentItems as SearchInventoryAdjustmentItemsFn,
+} from '../inventoryAdjustments.js'
+import type { lookupInventoryCertificate as LookupInventoryCertificateFn } from '../inventoryCertificates.js'
+import type { executeInventoryLotReplacement as ExecuteInventoryLotReplacementFn } from '../inventoryLotReplacement.js'
+import type { fetchInventoryLotSummary as FetchInventoryLotSummaryFn } from '../inventoryLotSummary.js'
+import type { NetSuiteClient as NetSuiteClientCtor } from '../netsuiteClient.js'
 
 function getErrorStatus(error: unknown) {
   return error instanceof Error && 'status' in error ? Number(error.status) : 503
 }
 
-export function createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, executeInventoryAdjustment, executeInventoryLotReplacement, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, fetchInventoryLotSummary, previewInventoryAdjustment, requireInternalApiKey, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError, InventoryLotReplacementError, InventoryLotSummaryError }: any) {
+type InventarioRouteDeps = {
+  lookupInventoryCertificate: typeof LookupInventoryCertificateFn
+  NetSuiteClient: typeof NetSuiteClientCtor
+  executeInventoryAdjustment: typeof ExecuteInventoryAdjustmentFn
+  executeInventoryLotReplacement: typeof ExecuteInventoryLotReplacementFn
+  fetchInventoryAdjustmentBootstrap: typeof FetchInventoryAdjustmentBootstrapFn
+  fetchInventoryAdjustmentItemSnapshot: typeof FetchInventoryAdjustmentItemSnapshotFn
+  fetchInventoryLotSummary: typeof FetchInventoryLotSummaryFn
+  previewInventoryAdjustment: typeof PreviewInventoryAdjustmentFn
+  requireInternalApiKey: typeof RequireInternalApiKeyFn
+  searchInventoryAdjustmentAccounts: typeof SearchInventoryAdjustmentAccountsFn
+  searchInventoryAdjustmentItems: typeof SearchInventoryAdjustmentItemsFn
+}
+
+export function createInventarioRoutes({
+  lookupInventoryCertificate,
+  NetSuiteClient,
+  executeInventoryAdjustment,
+  executeInventoryLotReplacement,
+  fetchInventoryAdjustmentBootstrap,
+  fetchInventoryAdjustmentItemSnapshot,
+  fetchInventoryLotSummary,
+  previewInventoryAdjustment,
+  requireInternalApiKey,
+  searchInventoryAdjustmentAccounts,
+  searchInventoryAdjustmentItems,
+}: InventarioRouteDeps) {
   const router = Router()
-
-
-
-
-
-
-
-
 
   router.post('/ajustes/reemplazar-lote', requireInternalApiKey, async (request, response) => {
     try {
