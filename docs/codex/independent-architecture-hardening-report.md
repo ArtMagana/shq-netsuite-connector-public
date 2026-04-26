@@ -4,12 +4,13 @@
 
 - Rama de trabajo: `codex/independent-architecture-hardening-pass`.
 - `main` no fue modificado y no se hizo merge.
-- El checkout local se valido desde la raiz correcta del repositorio.
-- La rama ya contiene una pasada pequena y segura de hardening, tipado y DX sin tocar integraciones reales ni comportamiento sensible exitoso.
+- El PR #81 sigue en draft.
+- La rama ya contiene una pasada de hardening incremental, con cambios pequenos y revisables por commit.
+- No se ejecutaron integraciones reales contra NetSuite, SAT, Banxico, bancos, NAS ni otros servicios externos.
 
 ## Auditoria inicial
 
-### Alcance auditado
+### Alcance auditado al inicio de la rama
 
 - `backend/src/app.ts`
 - `backend/src/routes/bancosRoutes.ts`
@@ -29,31 +30,30 @@
 
 ### Que estaba bien desde el inicio
 
-- `backend/src/runtimeSecurity.ts` ya centralizaba reglas de CORS y limites de JSON, y exigia `ALLOWED_ORIGINS` en produccion.
-- `backend/src/routes/errorMiddleware.ts` y `backend/src/errors/AppError.ts` ya daban una base comun para errores tipados.
-- `backend/src/routes/bancosRoutes.ts` ya habia extraido una parte sensible de `app.ts` a un modulo dedicado.
-- `backend/src/services/bancosService.ts` ya devolvia un resultado tipado para el inicio del analisis y registraba contexto util sin tocar datos sensibles.
-- `frontend/src/services/api/httpClient.ts` ya concentraba encabezados, `fetch` y el encapsulamiento de errores HTTP.
-- `.editorconfig` y `.gitattributes` ya marcaban una convencion clara de UTF-8 y fin de linea.
-- `.github/workflows/ci.yml` ya tenia cache por lockfile y ejecutaba lint + build.
-- `Dockerfile` ya estaba estructurado como build multi-stage.
+- `runtimeSecurity.ts` ya centralizaba CORS y limites de JSON.
+- `AppError` y `errorMiddleware` ya daban una base comun para errores tipados.
+- `bancosRoutes.ts` ya habia empezado a sacar responsabilidad de `app.ts`.
+- `bancosService.ts` ya devolvia un resultado tipado para el arranque de analisis.
+- `frontend/src/services/api/httpClient.ts` ya concentraba la capa de `fetch`.
+- `.editorconfig` y `.gitattributes` ya marcaban UTF-8 y fin de linea.
+- CI ya tenia cache por lockfile.
+- `Dockerfile` ya usaba multi-stage build.
 
 ### Riesgos y deuda detectados en la auditoria inicial
 
-- `backend/src/app.ts` seguia demasiado grande y concentraba mucho wiring, reglas de borde y respuestas HTTP, con riesgo alto de conflicto de merge.
-- La estrategia de errores no era uniforme en todo el backend:
+- `backend/src/app.ts` seguia demasiado grande y con mucho wiring manual.
+- La estrategia de errores era heterogenea:
   - algunas rutas devolvian `{ success: false, error, code }`
   - otras devolvian solo `{ error }`
-  - otras resolvian status de forma manual sin `AppError`
-- `backend/src/routes/basicRoutes.ts` usaba `any` de forma amplia, lo que debilitaba el tipado.
-- `backend/src/internalApiKey.ts` protegia endpoints internos, pero respondia sin `code` estructurado.
-- `backend/src/routes/validationMiddleware.ts` ya soportaba codigos especificos, pero `bancosRoutes.ts` no los aprovechaba todavia.
-- `backend/src/routes/bancosRoutes.ts` cargaba una dependencia `BankImportError` que no participaba en la logica de la ruta.
-- Habia deriva de runtime entre entornos:
-  - CI usaba Node 22
-  - `Dockerfile` usaba Node 24
-  - `npm --prefix backend ci` mostraba advertencias `EBADENGINE` en dependencias con soporte declarado hasta Node 22
-- No existia verificacion automatica para BOM, bidi e invisibles peligrosos en archivos criticos.
+  - otras dependian del middleware global
+- `basicRoutes.ts` usaba `any` de forma amplia.
+- `internalApiKey.ts` no devolvia `code`.
+- `validationMiddleware.ts` ya aceptaba `code`, pero `bancosRoutes.ts` todavia no lo aprovechaba.
+- No existia diagnostico automatizado para BOM, bidi e invisibles peligrosos.
+- La plataforma estaba desalineada:
+  - CI usa Node 22
+  - Docker usa Node 24
+  - `npm --prefix backend ci` mostraba warnings `EBADENGINE`
 
 ### Validaciones ejecutadas al inicio
 
@@ -68,49 +68,84 @@
 Resultado de arranque:
 
 - `npm --prefix backend run build`: OK
-- `npm --prefix backend ci`: OK con advertencias `EBADENGINE`
+- `npm --prefix backend ci`: OK con warnings `EBADENGINE`
 - `npm --prefix frontend ci`: OK
 
 ## Cambios ya aplicados en esta rama
 
-### Documentacion
+### Guardrails y CI
 
-- `docs: add independent architecture hardening report`
-  - se agrego este reporte para dejar trazabilidad de la auditoria, los cambios aplicados y los pendientes reales.
+- CI sigue usando `npm --prefix backend ci` y `npm --prefix frontend ci`.
+- CI ahora ejecuta `python3 tools/check-text-encoding.py`.
+- Se agrego `tools/check-text-encoding.py` para detectar:
+  - BOM
+  - caracteres bidireccionales ocultos
+  - caracteres invisibles peligrosos
+- No se agrego script root `check:encoding` en `package.json`.
+  - se intento un fallback `python || python3`
+  - se descarto porque no fue seguro en PowerShell
+  - se prefirio mantener el guardrail en CI y por comando directo para no introducir una trampa cross-shell
 
-### Hardening pequeno en rutas de bancos
+### Contrato minimo de errores HTTP
 
-- `refactor: use specific bancos validation codes`
-  - `/api/bancos/analyze` ahora usa `BANK_ANALYZE_VALIDATION_ERROR`
-  - `/api/bancos/analysis/start` ahora usa `BANK_ANALYSIS_START_VALIDATION_ERROR`
-- `refactor: remove unused bancos route error dependency`
-  - se elimino el wiring no usado de `BankImportError` entre `backend/src/routes/bancosRoutes.ts` y `backend/src/app.ts`
-- ajuste adicional solicitado despues:
-  - se elimino `getErrorStatus` de `backend/src/routes/bancosRoutes.ts` porque ya no tenia referencias reales
+- `backend/src/routes/httpTypes.ts` ahora expone:
+  - `ErrorResponse`
+  - `ValidationErrorResponse`
+  - `AuthErrorResponse`
+- `validationMiddleware.ts` usa `ValidationErrorResponse`.
+- `internalApiKey.ts` ahora conserva los status actuales pero responde con `error` + `code`:
+  - `INTERNAL_API_KEY_MISSING`
+  - `INTERNAL_API_KEY_INVALID`
+- Esto endurece el contrato para una app interna, pero no sustituye autenticacion enterprise real.
+- `VITE_INTERNAL_API_KEY` en frontend no debe considerarse un secreto fuerte; es solo un mecanismo de conveniencia interna.
 
-### Tipado minimo compartido
+### Cierre incremental de bancos
 
-- `refactor: add validation error response type`
-  - se agrego `backend/src/routes/httpTypes.ts`
-  - `validationMiddleware.ts` ahora declara `Response<ValidationErrorResponse>` sin forzar una arquitectura mayor
+- `bancosRoutes.ts` ya usa constantes de validacion en `bancosErrorCodes.ts`:
+  - `BANK_ANALYZE_VALIDATION_ERROR`
+  - `BANK_ANALYSIS_START_VALIDATION_ERROR`
+- Se movieron a `bancosRoutes.ts` dos endpoints pequenos antes ubicados en `app.ts`:
+  - `POST /api/bancos/analysis/recover`
+  - `GET /api/bancos/analysis/:analysisId`
+- La extraccion mantuvo a proposito el contrato legacy de error de esos endpoints:
+  - mismo status
+  - mismo body `{ error }`
+- Se documento `docs/api/bancos.md` con los endpoints ya migrados y sus contratos confirmados por codigo.
 
-### DX y reproducibilidad
+### Frontend readiness sin cambios visuales
 
-- `ci: use npm ci for reproducible installs`
-  - `.github/workflows/ci.yml` cambio `npm install` por `npm ci` para `backend` y `frontend`
-- `chore: add text encoding diagnostic tool`
-  - se agrego `tools/check-text-encoding.py` para detectar BOM, bidi e invisibles peligrosos
-- ajuste adicional solicitado despues:
-  - el workflow de CI ahora ejecuta `python3 tools/check-text-encoding.py`
+- `frontend/src/services/api/httpClient.ts` conserva compatibilidad con `status` y `body`.
+- `HttpClientError` ahora tambien preserva:
+  - `parsedBody`
+  - `errorCode`
+  - `errorMessage`
+- No se tocaron pantallas, estilos ni consumidores existentes.
+- Los consumidores pueden migrar gradualmente desde `JSON.parse(reason.body)` hacia propiedades ya parseadas.
 
-### Validaciones ejecutadas despues de aplicar cambios
+### Guardrails preventivos para archivos sensibles
+
+- `.gitignore` ahora cubre mejor:
+  - `.env.*` con excepcion para `**/.env.example`
+  - `*.pem`
+  - `*.key`
+  - `*.p12`
+  - `*.pfx`
+  - `*.crt`
+  - `*.cer`
+  - `logs/`
+  - `tmp/`
+- No se agrego `*.xml`.
+  - se descarto por riesgo de ocultar fixtures XML legitimos o insumos validos del repo
+  - si mas adelante se detectan CFDI reales en el flujo de trabajo, conviene atacar el problema con reglas mas especificas
+
+### Validaciones corridas durante la rama
 
 - `npm --prefix backend run build`
 - `npm --prefix frontend run build`
 - `git diff --check`
 - `python tools/check-text-encoding.py`
 
-Estado actual al momento de esta actualizacion:
+Estado de validacion al momento de esta actualizacion:
 
 - `npm --prefix backend run build`: OK
 - `npm --prefix frontend run build`: OK
@@ -119,46 +154,158 @@ Estado actual al momento de esta actualizacion:
 
 ## Pendientes reales despues de esta rama
 
-### Riesgos y deuda que siguen abiertos
+### Deuda y riesgos que siguen abiertos
 
-- `backend/src/app.ts` sigue siendo el principal punto de concentracion y conflicto potencial; conviene seguir extrayendo rutas por dominios pequenos y validables.
-- La estrategia de errores del backend sigue siendo heterogenea fuera del alcance reducido de esta rama.
-- `backend/src/routes/basicRoutes.ts` sigue necesitando reemplazar `any` por tipos concretos o contratos minimos.
-- `backend/src/internalApiKey.ts` sigue respondiendo sin `code` estructurado y podria alinearse con la capa de errores endurecida.
-- La divergencia de version de Node entre CI y `Dockerfile` sigue abierta y requiere una decision deliberada de plataforma.
-- El frontend sigue recibiendo `HttpClientError.body` como `string` crudo; podria mejorarse con parseo opcional de errores JSON conocidos si se hace sin acoplar mas a los consumidores.
+- `backend/src/app.ts` sigue siendo el principal punto de concentracion y conflicto potencial.
+- Todavia existen rutas legacy que devuelven solo `{ error }` sin `code`.
+- `basicRoutes.ts` sigue usando `any`.
+- `internalApiKey.ts` ya tiene `code`, pero el resto del backend no esta estandarizado todavia.
+- `analysis/recover` y `analysis/:analysisId` siguen con contrato legacy por decision deliberada de no romper clientes.
+- La divergencia de runtime sigue abierta:
+  - CI Node 22
+  - Docker Node 24
+  - warnings `EBADENGINE`
+- No se cambio version de Node en esta rama porque no fue claramente seguro.
 
-### Cambios que no conviene hacer todavia
+### Cambios descartados por riesgo
 
-- No refactorizar `backend/src/app.ts` de forma masiva en esta misma rama.
-- No unificar toda la estrategia de errores de golpe.
-- No tocar autenticacion real de NetSuite, SAT, Banxico u otras integraciones externas.
-- No tocar secretos, `.env` reales, certificados, XML, CFDI, logs ni tokens.
-- No cambiar el frontend visual ni el comportamiento UX.
-- No tocar despliegue real ni produccion.
+- No se agrego script root `check:encoding` por incompatibilidad cross-shell.
+- No se cambio la version de Node de CI ni Docker.
+- No se refactorizo `app.ts` de forma masiva.
+- No se migraron endpoints complejos de `bancos` como `candidates`, `cep`, `journals`, `history/upload` o `corrections`.
+- No se agrego framework de tests nuevo porque la infraestructura actual no esta lista y meterla aqui ensuciaria la rama.
+- No se ignoro `*.xml` para no romper posibles fixtures legitimos.
 
-### Orden recomendado de PRs futuros
+### Cobertura de pruebas minima recomendada
 
-1. PR de consistencia de errores:
-   - alinear respuestas de validacion, auth interna y errores de dominio sobre un contrato comun
-2. PR de tipado:
-   - eliminar `any` de `basicRoutes.ts` y contratos cercanos
-3. PR estructural por dominios:
-   - seguir extrayendo rutas de `app.ts` en modulos pequenos y con validacion estricta por paso
-4. PR de plataforma:
-   - alinear version de Node entre desarrollo, CI y Docker solo despues de validar compatibilidad real
+Infraestructura observada:
 
-### Riesgos de merge
+- no hay script `test` en `package.json`
+- no hay `vitest`
+- no hay `jest`
+- no hay `tsx`
+- no hay `ts-node`
+- no se detecto un runner de tests listo para usar sin cambios adicionales
 
-- Riesgo medio en `backend/src/app.ts` si el flujo manual principal sigue tocando el wiring al mismo tiempo.
-- Riesgo medio en `.github/workflows/ci.yml` por posible solapamiento con otros cambios de CI.
-- Riesgo bajo en `bancosRoutes.ts`, `validationMiddleware.ts`, `httpTypes.ts` y `tools/check-text-encoding.py` por ser cambios pequenos y localizados.
+Recomendacion pragmatica:
 
-### Fuera de alcance
+- primera opcion recomendada: `node:test` con archivos pequenos fuera del flujo principal y sin framework grande
+- segunda opcion, si se acepta una dependencia minima futura: `tsx` para ejecutar tests TypeScript pequenos con `node:test`
 
-- Ejecucion real contra NetSuite, SAT, Banxico, bancos, NAS u otros servicios externos.
-- Validacion con datos reales o archivos sensibles.
-- Refactors grandes de arquitectura.
-- Cambios de produccion o deploy real.
-- Cambios visuales del frontend.
-- Pruebas end-to-end o de integracion que requieran credenciales o rediseno estructural.
+Primeros archivos a cubrir:
+
+1. `backend/src/routes/bancosValidation.ts`
+2. `backend/src/routes/validationMiddleware.ts`
+3. `backend/src/internalApiKey.ts`
+4. `tools/check-text-encoding.py`
+
+Casos minimos sugeridos:
+
+- `isBancosAnalyzeRequest` acepta `bankId` valido y rechaza vacios
+- `isBancosAnalysisStartRequest` exige `bankId`, `fileName` y `fileBase64`
+- `validateBody` responde `400` con `error` + `code`
+- `requireInternalApiKey` responde `401` y `503` con `code`
+- `check-text-encoding.py` falla con BOM y con bidi
+
+Comandos propuestos para una fase futura:
+
+- opcion sin framework grande:
+  - `npm --prefix backend run build`
+  - `node --test backend/test/**/*.test.mjs`
+- opcion con dependencia minima futura:
+  - `tsx --test backend/test/**/*.test.ts`
+
+## Mapa de arquitectura del backend
+
+| Modulo | Estado | Evaluacion | Siguiente paso recomendado |
+| --- | --- | --- | --- |
+| `backend/src/app.ts` | Legacy grande | Concentracion alta de wiring y contratos HTTP mezclados | Seguir extrayendo por dominios pequenos y con diffs controlados |
+| `backend/src/routes/` | Parcialmente migrado | Ya existe una capa de routers, pero no todos los dominios estan uniformados | Priorizar bancos, luego bloques con menos dependencias externas |
+| `backend/src/services/` | Parcialmente migrado | `bancosService.ts` ya aporta una capa intermedia util | Repetir el patron solo donde agregue validacion o error handling claro |
+| `backend/src/bankImports.ts` | Dominio pesado | Mucha logica real y rutas legacy dependen de este modulo | Mantener cambios pequenos alrededor del borde HTTP antes de tocar logica interna |
+| Inventario | Parcialmente migrado | Ya existe `inventarioRoutes.ts` y separacion visible | Continuar con endpoints pequenos y contratos claros |
+| SAT | Mayormente legacy de borde | Varias rutas viven todavia en `app.ts` | Postergar hasta cerrar errores comunes y auth interna |
+| NetSuite | Mayormente legacy de borde | Integracion sensible y con mucho riesgo operativo | No mover sin objetivos muy delimitados y sin tocar integraciones reales |
+| Egresos | Legacy de borde | Sigue colgando de `app.ts` | Posponer hasta despues de errores unificados |
+| Facturas | Legacy de borde | Muchas rutas mutantes e integracion sensible | Posponer hasta despues de testing minimo y mejor tipado |
+| Frontend API client | Parcialmente preparado | Ya conserva `parsedBody`, `errorCode` y `errorMessage` | Migrar consumidores gradualmente a errores estructurados |
+| CI / Docker | Parcialmente alineado | CI ya tiene guardrails mejores, pero runtime sigue desalineado | Resolver Node 22 vs 24 en una rama de plataforma separada |
+
+Orden recomendado para seguir reduciendo `app.ts`:
+
+1. seguir con `bancos` en endpoints pequenos y de solo borde HTTP
+2. continuar con `inventario` donde ya hay separacion previa
+3. atacar contratos de error comunes antes de mover dominios mas sensibles
+4. dejar SAT, NetSuite, egresos y facturas para fases con mas pruebas y aislamiento
+
+## Riesgos de merge
+
+- Riesgo medio en `backend/src/app.ts` porque sigue siendo un hotspot de wiring.
+- Riesgo medio en `.github/workflows/ci.yml` si hay trabajo paralelo sobre CI.
+- Riesgo bajo en `httpTypes.ts`, `validationMiddleware.ts`, `internalApiKey.ts` y `httpClient.ts` por alcance localizado.
+- Riesgo bajo en `docs/api/bancos.md`, `tools/check-text-encoding.py` y `.gitignore`.
+
+## Fuera de alcance
+
+- Integraciones reales contra NetSuite, SAT, Banxico, bancos, NAS u otros servicios externos.
+- Cambios en secretos, `.env` reales, certificados, XML reales, CFDI reales o tokens.
+- Cambios visuales fuertes de frontend.
+- Refactor masivo de `app.ts`.
+- Cambios de produccion, deploy real o merge a `main`.
+
+## Roadmap para SaaS interno premium
+
+### 1. Backend foundation
+
+- completar la migracion incremental de `bancos`
+- unificar errores HTTP
+- mantener auth interna consistente
+- partir `app.ts` por dominios pequenos
+
+### 2. Data/import reliability
+
+- validacion fuerte de payloads
+- limites claros de archivos
+- trazabilidad de corridas
+- logging seguro y sin datos sensibles
+
+### 3. Testing
+
+- cobertura de validadores
+- cobertura de services
+- cobertura de routes
+- smoke tests de build y rutas criticas
+
+### 4. Frontend premium
+
+- design system interno consistente
+- loading states claros
+- empty states utiles
+- error states por `code`
+- responsive consistente
+- tablas mas profesionales
+
+### 5. Operations
+
+- healthchecks confiables
+- backups
+- rollback documentado
+- Docker no-root
+- variables obligatorias
+- checklist de deploy
+
+### 6. Security
+
+- auth real futura
+- separacion de secretos
+- secret scanning
+- permisos por rol
+- auditoria y trazabilidad
+
+### 7. Release process
+
+- staging
+- PR template
+- changelog
+- versionado
+- migraciones controladas
