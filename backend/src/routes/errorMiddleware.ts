@@ -1,6 +1,11 @@
 import type { ErrorRequestHandler } from 'express'
+import { AppError } from '../errors/AppError.js'
 
 function getErrorStatus(error: unknown): number {
+  if (error instanceof AppError) {
+    return error.status
+  }
+
   if (error && typeof error === 'object' && 'status' in error) {
     const status = (error as { status?: unknown }).status
     if (typeof status === 'number' && Number.isFinite(status)) {
@@ -12,6 +17,10 @@ function getErrorStatus(error: unknown): number {
 }
 
 function getErrorCode(error: unknown): string {
+  if (error instanceof AppError) {
+    return error.code
+  }
+
   if (error && typeof error === 'object' && 'code' in error) {
     const code = (error as { code?: unknown }).code
     if (typeof code === 'string' && code.trim()) {
