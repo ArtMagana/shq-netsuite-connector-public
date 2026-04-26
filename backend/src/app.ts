@@ -203,7 +203,23 @@ export function createApp() {
     getBankImportConfig,
     BankImportError,
   }))
-  app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError }))
+  app.use('/api/inventario', createInventarioRoutes({
+    lookupInventoryCertificate,
+    InventoryCertificateError,
+    NetSuiteClient,
+    executeInventoryAdjustment,
+    executeInventoryLotReplacement,
+    fetchInventoryAdjustmentBootstrap,
+    fetchInventoryAdjustmentItemSnapshot,
+    fetchInventoryLotSummary,
+    previewInventoryAdjustment,
+    requireInternalApiKey,
+    searchInventoryAdjustmentAccounts,
+    searchInventoryAdjustmentItems,
+    InventoryAdjustmentError,
+    InventoryLotReplacementError,
+    InventoryLotSummaryError,
+  }))
 
   app.use('/api', createBasicRoutes({
     overview,
