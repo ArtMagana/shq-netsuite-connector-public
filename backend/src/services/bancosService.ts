@@ -1,4 +1,5 @@
 import { BankImportError, startBankImportAnalysisRun as startBankImportAnalysisRunCore } from '../bankImports.js'
+import { AppError } from '../errors/AppError.js'
 import { logBancosServiceEvent } from './bancosLogger.js'
 
 export type BancosAnalysisStartResult = ReturnType<typeof startBankImportAnalysisRunCore>
@@ -16,21 +17,31 @@ function success<T>(data: T): BancosServiceResult<T> {
   }
 }
 
-function failure<T>(error: BankImportError): BancosServiceResult<T> {
+function failure<T>(error: AppError): BancosServiceResult<T> {
   return {
     success: false,
     error: error.message,
   }
 }
 
-function normalizeBankImportError(error: unknown): BankImportError {
-  if (error instanceof BankImportError) {
+function normalizeBankImportError(error: unknown): AppError {
+  if (error instanceof AppError) {
     return error
+  }
+
+  if (error instanceof BankImportError) {
+    return new AppError(error.message, {
+      status: error.status,
+      code: 'BANK_IMPORT_ERROR',
+    })
   }
 
   const message = error instanceof Error ? error.message : 'Unknown bank analysis error.'
 
-  return new BankImportError(`No se pudo iniciar el analisis bancario: ${message}`)
+  return new AppError(`No se pudo iniciar el analisis bancario: ${message}`, {
+    status: 500,
+    code: 'BANK_IMPORT_UNEXPECTED_ERROR',
+  })
 }
 
 export function startBankImportAnalysisRun(
