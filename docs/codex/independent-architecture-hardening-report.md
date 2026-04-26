@@ -77,6 +77,7 @@ Resultado de arranque:
 
 - CI sigue usando `npm --prefix backend ci` y `npm --prefix frontend ci`.
 - CI ahora ejecuta `python3 tools/check-text-encoding.py`.
+- El ultimo GitHub Actions CI del PR esta en verde.
 - Se agrego `tools/check-text-encoding.py` para detectar:
   - BOM
   - caracteres bidireccionales ocultos
@@ -99,11 +100,23 @@ Resultado de arranque:
 - Esto endurece el contrato para una app interna, pero no sustituye autenticacion enterprise real.
 - `VITE_INTERNAL_API_KEY` en frontend no debe considerarse un secreto fuerte; es solo un mecanismo de conveniencia interna.
 
+### Revision de consistencia de errores
+
+- Los errores nuevos documentados con `code` ya devuelven `code` realmente en codigo:
+  - `validationMiddleware.ts`
+  - `internalApiKey.ts`
+  - `startBankImportAnalysisRun(...)` cuando responde `success: false`
+- Los endpoints legacy de `bancos` que siguen devolviendo solo `{ error }` se mantienen documentados como legacy:
+  - `POST /api/bancos/analysis/recover`
+  - `GET /api/bancos/analysis/:analysisId`
+- No se cambiaron esos contratos legacy en esta pasada para evitar romper clientes.
+
 ### Cierre incremental de bancos
 
 - `bancosRoutes.ts` ya usa constantes de validacion en `bancosErrorCodes.ts`:
   - `BANK_ANALYZE_VALIDATION_ERROR`
   - `BANK_ANALYSIS_START_VALIDATION_ERROR`
+- `handleAnalysisRecover` ahora usa un tipo derivado del parametro real de `recoverBankImportAnalysisRun(...)` en vez de reaprovechar el tipo de `analysis/start`.
 - Se movieron a `bancosRoutes.ts` dos endpoints pequenos antes ubicados en `app.ts`:
   - `POST /api/bancos/analysis/recover`
   - `GET /api/bancos/analysis/:analysisId`
@@ -119,8 +132,16 @@ Resultado de arranque:
   - `parsedBody`
   - `errorCode`
   - `errorMessage`
+- `frontend/src/services/api/httpErrors.ts` agrega helpers pequenos y seguros:
+  - `isHttpClientError(error)`
+  - `getHttpErrorMessage(error, fallback)`
+  - `getHttpErrorCode(error)`
 - No se tocaron pantallas, estilos ni consumidores existentes.
 - Los consumidores pueden migrar gradualmente desde `JSON.parse(reason.body)` hacia propiedades ya parseadas.
+- Uso recomendado para una siguiente pasada:
+  - reemplazar parseos manuales de `reason.body`
+  - preferir `getHttpErrorMessage(...)` para mensajes de fallback
+  - preferir `getHttpErrorCode(...)` para estados de error orientados por `code`
 
 ### Guardrails preventivos para archivos sensibles
 
@@ -166,6 +187,36 @@ Estado de validacion al momento de esta actualizacion:
   - Docker Node 24
   - warnings `EBADENGINE`
 - No se cambio version de Node en esta rama porque no fue claramente seguro.
+
+### Priorizacion de extraccion pendiente de bancos
+
+| Endpoint | Complejidad | Dependencias | Riesgo | Recomendacion |
+| --- | --- | --- | --- | --- |
+| `POST /api/bancos/history/upload` | Media | `requireInternalApiKey`, `uploadBankHistoricalStatement`, `BankImportError`, body grande | Medio | Mover despues de `pagos-individuales`; es acotado, pero ya toca flujo de carga historica |
+| `GET /api/bancos/pagos-individuales` | Baja | `listBankIndividualPaymentFileMetadata`, `BankImportBankId` | Bajo | Muy buen candidato para el siguiente PR pequeno |
+| `POST /api/bancos/pagos-individuales/upload` | Baja-media | `requireInternalApiKey`, `upsertBankIndividualPaymentFiles`, body grande | Bajo-medio | Mover junto con el GET anterior en un PR enfocado |
+| `GET /api/bancos/sample` | Media | `analyzeBankImportSample`, `BankImportError`, parseo de query | Medio | Dejar para un PR especifico de sample |
+| `POST /api/bancos/sample` | Media | `analyzeBankImportSample`, `BankImportError`, `transientCorrections` | Medio | Mover junto con el GET de sample |
+| `GET /api/bancos/candidates` | Media | `searchBankImportCandidates`, varios query params, `BankImportError` | Medio | Aplazar hasta despues de `sample` |
+| `POST /api/bancos/corrections` | Media-alta | `requireInternalApiKey`, `saveBankImportCorrection`, `BankImportError` | Medio-alto | Postergar por ser mutacion interna |
+| `POST /api/bancos/journals/post` | Alta | `requireInternalApiKey`, `postBankImportJournals`, `BankImportError` | Alto | Dejar para una fase con mas pruebas y contexto de negocio |
+| `POST /api/bancos/saldo-validado` | Media | `requireInternalApiKey`, `saveBankImportValidatedBalance`, `BankImportError` | Medio | Mover solo despues de cerrar correcciones mutantes |
+| `GET /api/bancos/cep/status` | Media | `getBanxicoCepInstitutions`, `BanxicoServiceError` | Medio | Dejar fuera del siguiente PR; ya depende de servicio externo |
+| `GET /api/bancos/cep/institutions` | Media | `getBanxicoCepInstitutions`, `BanxicoServiceError` | Medio | Mover junto con `cep/status` si se hace un PR de solo lectura CEP |
+| `POST /api/bancos/cep/lookup` | Media-alta | `lookupBanxicoCep`, `BanxicoServiceError` | Medio-alto | Posponer por dependencia externa |
+| `POST /api/bancos/cep/details` | Alta | `requireInternalApiKey`, retry manual, `downloadBanxicoCepDetails`, `upsertBanxicoCepRecognition`, remocion de XML | Alto | Dejar para una fase aislada y con mucha cautela |
+
+Siguiente PR pequeno recomendado:
+
+- mover `GET /api/bancos/pagos-individuales`
+- mover `POST /api/bancos/pagos-individuales/upload`
+
+Motivo:
+
+- comparten dominio
+- no dependen de NetSuite ni Banxico
+- el contrato es simple
+- el diff deberia seguir pequeno y revisable
 
 ### Cambios descartados por riesgo
 
@@ -234,9 +285,10 @@ Comandos propuestos para una fase futura:
 Orden recomendado para seguir reduciendo `app.ts`:
 
 1. seguir con `bancos` en endpoints pequenos y de solo borde HTTP
-2. continuar con `inventario` donde ya hay separacion previa
-3. atacar contratos de error comunes antes de mover dominios mas sensibles
-4. dejar SAT, NetSuite, egresos y facturas para fases con mas pruebas y aislamiento
+2. completar `pagos-individuales` como siguiente corte pequeno de `bancos`
+3. continuar con `inventario` donde ya hay separacion previa
+4. atacar contratos de error comunes antes de mover dominios mas sensibles
+5. dejar SAT, NetSuite, egresos y facturas para fases con mas pruebas y aislamiento
 
 ## Riesgos de merge
 
@@ -252,6 +304,49 @@ Orden recomendado para seguir reduciendo `app.ts`:
 - Cambios visuales fuertes de frontend.
 - Refactor masivo de `app.ts`.
 - Cambios de produccion, deploy real o merge a `main`.
+
+## Estrategia de merge recomendada
+
+### Opcion A: merge completo del PR
+
+Ventajas:
+
+- aterriza de una vez los guardrails, contratos HTTP minimos, cierre parcial de `bancos`, readiness de frontend y documentacion
+- evita trabajo adicional de rearmado
+- ya existe CI verde y el PR sigue siendo revisable por commits
+
+Riesgos:
+
+- mezcla varios temas en un solo diff
+- obliga a revisar backend, frontend, CI y documentacion en el mismo PR
+- aumenta la carga de contexto para reviewers
+
+### Opcion B: dividir por commits o por bloques tematicos
+
+Bloques naturales:
+
+1. CI y encoding guardrails
+2. HTTP errors e `internalApiKey`
+3. `bancos` router + documentacion API
+4. frontend HTTP helpers/readiness
+5. reporte, roadmap y estrategia
+
+Ventajas:
+
+- reduce el radio de revision por PR
+- permite mergear primero lo menos controversial
+- simplifica rollback selectivo si algo incomoda
+
+Riesgos:
+
+- requiere trabajo manual adicional para rearmar PRs
+- puede introducir costo de coordinacion innecesario si el equipo ya esta comodo revisando por commits
+
+### Recomendacion final
+
+- Si el equipo quiere velocidad y puede revisar por commits: el merge completo es razonable.
+- Si el equipo prioriza historia mas limpia y menor carga de revision: conviene dividir por bloques tematicos.
+- Recomendacion preferida: revisar este PR por commits y, si aparece resistencia por alcance, dividirlo en bloques tematicos en vez de seguir creciendo esta rama.
 
 ## Roadmap para SaaS interno premium
 
