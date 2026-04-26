@@ -6,17 +6,6 @@ import type { BancosAnalysisStartRequest, BancosAnalysisStartResult, BancosServi
 import { isBancosAnalysisStartRequest, isBancosAnalyzeRequest } from './bancosValidation.js'
 import { validateBody } from './validationMiddleware.js'
 
-function getErrorStatus(error: unknown): number {
-  if (error && typeof error === 'object' && 'status' in error) {
-    const status = (error as { status?: unknown }).status
-    if (typeof status === 'number' && Number.isFinite(status)) {
-      return status
-    }
-  }
-
-  return 503
-}
-
 type BancosAnalyzeRequestBody = Parameters<typeof AnalyzeBankImportFn>[0]
 type BancosAnalyzeResponseBody = Awaited<ReturnType<typeof AnalyzeBankImportFn>>
 
