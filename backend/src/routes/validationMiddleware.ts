@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
+import type { ValidationErrorResponse } from './httpTypes.js'
 
 export function validateBody<T>(
   guard: (value: unknown) => value is T,
@@ -7,7 +8,7 @@ export function validateBody<T>(
 ) {
   return function validateRequestBody(
     request: Request<unknown, unknown, unknown>,
-    response: Response,
+    response: Response<ValidationErrorResponse>,
     next: NextFunction,
   ) {
     if (!guard(request.body)) {
