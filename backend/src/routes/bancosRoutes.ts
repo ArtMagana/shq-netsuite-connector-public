@@ -32,15 +32,8 @@ export function createBancosRoutes(deps: BancosRouteDeps) {
   const router = Router()
 
   async function handleAnalyze(request: Request<unknown, unknown, BancosAnalyzeRequestBody>, response: Response) {
-    try {
-      const result: BancosAnalyzeResponseBody = await analyzeBankImport(request.body)
-      response.json(result)
-    } catch (error) {
-      const status = getErrorStatus(error)
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown bank import error.',
-      })
-    }
+    const result: BancosAnalyzeResponseBody = await analyzeBankImport(request.body)
+    response.json(result)
   }
 
   router.post('/analyze', validateBody(isBancosAnalyzeRequest, 'La solicitud de analisis bancario no es valida.'), handleAnalyze)
