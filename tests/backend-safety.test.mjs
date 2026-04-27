@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict'
+import path from 'node:path'
 import test from 'node:test'
 
+import {
+  BANK_ANALYSIS_START_VALIDATION_ERROR,
+  BANK_ANALYZE_VALIDATION_ERROR,
+} from '../backend/dist/routes/bancosErrorCodes.js'
 import {
   isBancosAnalysisStartRequest,
   isBancosAnalyzeRequest,
 } from '../backend/dist/routes/bancosValidation.js'
 import { requireInternalApiKey } from '../backend/dist/internalApiKey.js'
+import { startBankImportAnalysisRun } from '../backend/dist/services/bancosService.js'
 import { validateBody } from '../backend/dist/routes/validationMiddleware.js'
 
 function createMockResponse() {
@@ -43,6 +49,31 @@ function withInternalApiKey(value, callback) {
   }
 }
 
+async function withEnv(overrides, callback) {
+  const previousValues = new Map()
+
+  for (const [key, value] of Object.entries(overrides)) {
+    previousValues.set(key, process.env[key])
+    if (typeof value === 'string') {
+      process.env[key] = value
+    } else {
+      delete process.env[key]
+    }
+  }
+
+  try {
+    return await callback()
+  } finally {
+    for (const [key, value] of previousValues.entries()) {
+      if (typeof value === 'string') {
+        process.env[key] = value
+      } else {
+        delete process.env[key]
+      }
+    }
+  }
+}
+
 test('isBancosAnalyzeRequest accepts a non-empty bankId', () => {
   assert.equal(isBancosAnalyzeRequest({ bankId: 'bbva' }), true)
   assert.equal(isBancosAnalyzeRequest({ bankId: '   ' }), false)
@@ -65,6 +96,11 @@ test('isBancosAnalysisStartRequest requires bankId, fileName and fileBase64', ()
     }),
     false,
   )
+})
+
+test('bancos validation error codes stay stable', () => {
+  assert.equal(BANK_ANALYZE_VALIDATION_ERROR, 'BANK_ANALYZE_VALIDATION_ERROR')
+  assert.equal(BANK_ANALYSIS_START_VALIDATION_ERROR, 'BANK_ANALYSIS_START_VALIDATION_ERROR')
 })
 
 test('validateBody responds with error and code when the request body is invalid', () => {
@@ -175,4 +211,54 @@ test('requireInternalApiKey delegates to next when the key is valid', () => {
     assert.equal(response.statusCode, undefined)
     assert.equal(response.payload, undefined)
   })
+})
+
+test('createApp wires route dependencies without throwing', async () => {
+  await withEnv(
+    {
+      ALLOWED_ORIGINS: undefined,
+      APP_ENV: undefined,
+      FRONTEND_DIST_DIR: path.resolve('frontend/dist'),
+      NODE_ENV: 'test',
+    },
+    async () => {
+      const { createApp } = await import('../backend/dist/app.js')
+
+      assert.doesNotThrow(() => {
+        const app = createApp()
+        assert.equal(typeof app.use, 'function')
+      })
+    },
+  )
+})
+
+test('startBankImportAnalysisRun returns a structured failure for invalid requests without leaking fileBase64', () => {
+  const originalConsoleInfo = console.info
+  const capturedLogs = []
+  console.info = (message) => {
+    capturedLogs.push(message)
+  }
+
+  try {
+    const result = startBankImportAnalysisRun({
+      bankId: 'bbva',
+      fileName: 'statement.csv',
+      fileBase64: '',
+    })
+
+    assert.equal(result.success, false)
+    assert.equal(result.error, 'Debes adjuntar el archivo bancario en base64.')
+    assert.equal(result.code, 'BANK_IMPORT_ERROR')
+    assert.equal(Object.prototype.hasOwnProperty.call(result, 'fileBase64'), false)
+
+    assert.equal(capturedLogs.length, 1)
+    const payload = JSON.parse(String(capturedLogs[0]))
+    assert.equal(payload.scope, 'bancos.service')
+    assert.equal(payload.event, 'analysis_start_failed')
+    assert.equal(payload.bankId, 'bbva')
+    assert.equal(payload.fileName, 'statement.csv')
+    assert.equal(Object.prototype.hasOwnProperty.call(payload, 'fileBase64'), false)
+  } finally {
+    console.info = originalConsoleInfo
+  }
 })
