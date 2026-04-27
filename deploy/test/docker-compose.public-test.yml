@@ -3,6 +3,9 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_INTERNAL_API_KEY: dummy-public-test-key
     container_name: shq-public-test
     restart: unless-stopped
     ports:

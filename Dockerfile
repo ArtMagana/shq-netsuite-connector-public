@@ -10,6 +10,10 @@ RUN npm ci
 
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
+ARG VITE_API_BASE_URL=/api
+ARG VITE_INTERNAL_API_KEY=
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_INTERNAL_API_KEY=${VITE_INTERNAL_API_KEY}
 COPY --from=backend-deps /app/backend/node_modules ./backend/node_modules
 COPY --from=frontend-deps /app/frontend/node_modules ./frontend/node_modules
 COPY backend ./backend
