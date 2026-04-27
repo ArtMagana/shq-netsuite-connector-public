@@ -354,7 +354,7 @@ Hallazgo real detectado durante la prueba:
 - el fix quedo documentado y aplicado en esta rama con `fix: restore inventario route dependencies`
 - la prueba aislada sirvio para detectar y corregir el bug sin tocar el repo privado ni produccion
 
-## Validación real en NAS — 2026-04-27
+## Validacion real en NAS - 2026-04-27
 
 Resultado confirmado despues del ajuste del gate web:
 
