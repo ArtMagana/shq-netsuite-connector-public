@@ -29,8 +29,14 @@ jobs:
       - name: Install frontend dependencies
         run: npm --prefix frontend ci
 
+      - name: Check text encoding
+        run: python3 tools/check-text-encoding.py
+
       - name: Lint
         run: npm run lint
 
       - name: Build
         run: npm run build
+
+      - name: Test
+        run: npm test
