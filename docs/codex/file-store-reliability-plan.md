@@ -140,10 +140,10 @@ Candidatos descartados para esta primera migracion:
 
 Contratos deseados:
 
-- `readJsonFileSafe(path, fallbackFactory, options)`
-- `parseJsonWithContext(raw, filePath)`
-- `createBackupPath(filePath, timestamp)`
-- `writeJsonFileAtomic(path, payload, options)`
+- `readJsonFile(path, fallback)`
+- `createBackupFile(path)`
+- `writeJsonFileAtomic(path, payload)`
+- `safeJsonStringify(payload)`
 
 Comportamiento recomendado:
 
@@ -151,6 +151,71 @@ Comportamiento recomendado:
 - `fs.renameSync(...)` o equivalente para swap atomico
 - backup opcional `*.bak`
 - errores con contexto del archivo y operacion
+
+## Estado del prototipo actual
+
+### Utilidades creadas
+
+Archivo:
+
+- `backend/src/infrastructure/storage/fileStoreUtils.ts`
+
+Funciones agregadas:
+
+- `readJsonFile(...)`
+- `writeJsonFileAtomic(...)`
+- `createBackupFile(...)`
+- `safeJsonStringify(...)`
+
+Cobertura actual:
+
+- lectura con fallback cuando el archivo no existe
+- parse explicito con contexto si el JSON esta corrupto
+- serializacion consistente con newline final
+- escritura por archivo temporal + rename
+- backup `.bak` optativo antes de sobrescribir
+
+### Tests agregados
+
+Archivo:
+
+- `tests/file-store-utils.test.mjs`
+
+Casos cubiertos:
+
+- `readJsonFile` devuelve fallback si el archivo no existe
+- `readJsonFile` lee JSON valido
+- `readJsonFile` falla explicitamente con JSON invalido
+- `writeJsonFileAtomic` crea JSON con newline final
+- `writeJsonFileAtomic` reemplaza contenido previo
+- `createBackupFile` crea `.bak` si existe archivo original
+- `createBackupFile` no falla si el archivo no existe
+
+### Store migrado en este prototipo
+
+- `backend/src/bankEquivalenceStore.ts`
+
+Cambio aplicado:
+
+- lectura manual sustituida por `readJsonFile(...)`
+- escritura directa sustituida por:
+  - `createBackupFile(...)`
+  - `writeJsonFileAtomic(...)`
+
+Motivo de seleccion:
+
+- pequeno
+- sin secretos
+- sin base64
+- sin dependencia de arranque base
+- estructura simple y buena para validar el patron
+
+Alcance deliberadamente limitado:
+
+- no cambia shape de datos
+- no cambia nombre de archivo
+- no introduce locking
+- no intenta migrar mas stores en esta rama
 
 ## Estrategia de backup
 
@@ -184,8 +249,61 @@ Motivo:
 - `git diff --check`
 - `python tools/check-text-encoding.py`
 
+## Stores pendientes prioritarios
+
+Siguientes candidatos razonables despues del piloto:
+
+1. `backend/src/bankBalanceValidationStore.ts`
+2. `backend/src/egresosConciliationStore.ts`
+3. `backend/src/netsuiteAccountStore.ts`
+
+Stores que conviene dejar para mas adelante:
+
+- `bankAnalysisRunStore.ts`
+- `bankWorkingFileStore.ts`
+- `bankIndividualPaymentStore.ts`
+- `satAnalysisWindows.ts`
+- `satDownloadHistoryStore.ts`
+- `netsuiteOAuth.ts`
+
+Motivo:
+
+- mayor impacto funcional
+- mayor volumen de datos
+- base64 o secretos
+- flujo mas sensible o cercano a integraciones
+
+## Riesgos restantes
+
+- no hay locking real todavia
+- los demas stores siguen con read/modify/write legacy
+- `createBackupFile(...)` usa un solo `.bak` y no tiene rotacion
+- no hay pruebas de concurrencia
+- la mayoria de loaders legacy siguen haciendo silent catch
+
+## Proxima fase recomendada
+
+1. decidir si conviene introducir locking real con `proper-lockfile` o alternativa minima
+2. agregar pruebas de concurrencia sobre temp dirs
+3. definir retencion de backups `.bak`
+4. migrar stores de riesgo bajo-medio de forma gradual
+5. definir estrategia de recuperacion para JSON corrupto
+6. evaluar si algun store necesita writer asincrono o cola dedicada
+
+## Validacion Docker aislada
+
+- No ejecutada en este entorno de Codex porque `docker` no esta instalado localmente.
+- Para validar el runtime aislado del laboratorio, usar:
+  - `docker compose -f deploy/test/docker-compose.public-test.yml -p shq-public-test up -d --build`
+  - `curl http://127.0.0.1:8090/api/health`
+  - `docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"`
+  - `docker logs --tail=80 shq-public-test`
+- Esa validacion debe confirmar que `shq-public-test` responde en `8090` sin tocar la instancia existente.
+
 ## Que no se implemento todavia
 
 - no se agrego `proper-lockfile`
-- no se migro ningun store
-- no se cambio comportamiento runtime de persistencia
+- no se migro todo el sistema
+- no se tocaron stores con secretos o base64 como piloto
+- no se agrego recuperacion automatica de JSON corrupto
+- no se tocaron deploys ni integraciones reales
