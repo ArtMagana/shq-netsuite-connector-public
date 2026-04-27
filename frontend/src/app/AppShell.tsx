@@ -138,6 +138,16 @@ function resolveHeaderSection(pathname: string): ConsoleHeaderSection {
     }
   }
 
+  if (normalizedPathname === '/lab' || normalizedPathname.startsWith('/lab/')) {
+    return {
+      badge: 'LAB',
+      eyebrow: 'Centro operativo general',
+      title: 'Laboratorio web',
+      to: '/lab',
+      detail: 'Diagnostico ligero del ambiente publico de prueba para validar healthcheck y wiring.',
+    }
+  }
+
   return defaultHeaderSection
 }
 
@@ -209,6 +219,10 @@ function resolveDocumentTitle(pathname: string, search: string) {
 
   if (normalizedPathname === '/search-find' || normalizedPathname.startsWith('/search-find/')) {
     return 'Search / Find'
+  }
+
+  if (normalizedPathname === '/lab' || normalizedPathname.startsWith('/lab/')) {
+    return 'Laboratorio web'
   }
 
   return resolveHeaderSection(normalizedPathname).title

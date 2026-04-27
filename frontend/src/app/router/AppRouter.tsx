@@ -11,6 +11,7 @@ import { HomePage } from '../../features/home/HomePage'
 import { IngresosPage } from '../../features/ingresos/IngresosPage'
 import { InventoryPage } from '../../features/inventory/InventoryPage'
 import { InventoryAdjustmentsPage } from '../../features/inventory/InventorySettingsPage'
+import { PublicTestDiagnosticsPage } from '../../features/lab/PublicTestDiagnosticsPage'
 import { SearchFindPage } from '../../features/searchFind/SearchFindPage'
 
 export function AppRouter() {
@@ -33,7 +34,7 @@ export function AppRouter() {
           <Route path="analysis" element={<Navigate to="/ingresos" replace />} />
           <Route path="bancos" element={<Navigate to="/bancos/payana-higo" replace />} />
           <Route path="bancos/:bankSlug" element={<BancosPage />} />
-          <Route path="lab" element={<Navigate to="/bancos/payana-higo" replace />} />
+          <Route path="lab" element={<PublicTestDiagnosticsPage />} />
           <Route path="facturas-sat/*" element={<FacturasSatPage />} />
           <Route path="queue" element={<Navigate to="/facturas-sat" replace />} />
           <Route path="entidades" element={<EntitiesPage />} />
