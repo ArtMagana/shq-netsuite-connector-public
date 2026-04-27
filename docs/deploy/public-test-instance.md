@@ -42,6 +42,12 @@ Una tarea no debe considerarse cerrada solo por build o CI. Para que un cambio q
 - validacion de al menos un endpoint protegido con dummy API key si aplica.
 - confirmacion explicita de que `supplai-app-1`, `netsuite-recon` u otra instancia existente no cambiaron.
 
+Importante:
+
+- `http://127.0.0.1:8090` solo sirve para validacion local desde el mismo host.
+- El gate web se considera cerrado solo cuando existe una URL de host o NAS que el usuario pueda abrir directamente desde su navegador.
+- Si solo existe `localhost` o `127.0.0.1`, el estado correcto es `PARTIAL / BLOCKED FOR USER VERIFICATION`.
+
 ## Camino 1: prueba local en Windows / PowerShell
 
 ### 1. Crear una carpeta separada
@@ -154,6 +160,8 @@ Con `PORT=8090`, la app deberia quedar en:
 
 - `http://127.0.0.1:8090`
 - diagnostico ligero: `http://127.0.0.1:8090/#/lab`
+
+Estas URLs son validas solo para la maquina donde corre el backend.
 
 ### 6. Validar que la prueba es aislada
 
@@ -268,6 +276,13 @@ VITE_API_BASE_URL=/api
 VITE_INTERNAL_API_KEY=dummy-public-test-key
 ```
 
+Notas de seguridad para esos build args:
+
+- `VITE_INTERNAL_API_KEY` no es un secreto fuerte.
+- su presencia en el bundle solo es aceptable para laboratorio o validacion interna controlada.
+- no debe reutilizarse esta configuracion en produccion.
+- no debe copiarse ninguna key real a variables `VITE_*`.
+
 Para prueba local fuera de Docker, `PORT=8090`.
 
 Para Docker:
@@ -298,6 +313,26 @@ Variables que pueden quedarse vacias o sin configurar para una prueba de UI y `h
 - no hay `.env` reales copiados
 - no hay secretos en archivos nuevos
 - no hay certificados ni XML reales agregados
+
+## Cierre real del gate web
+
+El gate queda realmente cerrado solo si se cumplen los dos niveles:
+
+1. Validacion local:
+   - `127.0.0.1:8090`
+   - `node tools/verify-public-test.mjs http://127.0.0.1:8090`
+   - `/#/lab`
+
+2. Validacion por usuario:
+   - URL accesible por el usuario fuera del host local
+   - ejemplo: `http://<NAS-O-IP-DE-PRUEBA>:8090`
+   - mismo healthcheck OK
+   - misma UI abriendo
+   - mismas comprobaciones de smoke test
+
+Si el segundo nivel no existe todavia, el estado correcto del gate es:
+
+- `PARTIAL / BLOCKED FOR USER VERIFICATION`
 
 ## Resultado de prueba real en NAS
 
