@@ -60,12 +60,11 @@ Otros endpoints de `bancos` siguen en `backend/src/app.ts` y mantienen contratos
   - devuelve el `BancosServiceResult` exitoso producido por `startBankImportAnalysisRun(request.body)`
 - Respuesta de error de autenticacion:
   - status `401` o `503` segun el caso
-  - body:
+  - en esta rama independiente contra `main`, el middleware actual de `internalApiKey` sigue respondiendo con el contrato legacy:
 
 ```json
 {
-  "error": "Invalid internal API key.",
-  "code": "INTERNAL_API_KEY_INVALID"
+  "error": "Unauthorized."
 }
 ```
 
@@ -73,8 +72,7 @@ o
 
 ```json
 {
-  "error": "Internal API key is not configured.",
-  "code": "INTERNAL_API_KEY_MISSING"
+  "error": "Internal API key is not configured."
 }
 ```
 
@@ -102,8 +100,6 @@ o
 ```
 
 - Codigos posibles confirmados en la ruta:
-  - `INTERNAL_API_KEY_INVALID`
-  - `INTERNAL_API_KEY_MISSING`
   - `BANK_ANALYSIS_START_VALIDATION_ERROR`
   - codigos devueltos por `startBankImportAnalysisRun(...)` cuando responde `success: false`
 
@@ -118,10 +114,13 @@ o
   - devuelve el JSON resuelto por `recoverBankImportAnalysisRun(request.body)`
 - Respuesta de error de autenticacion:
   - status `401` o `503`
-  - body con `error` y `code`
-  - codigos confirmados:
-    - `INTERNAL_API_KEY_INVALID`
-    - `INTERNAL_API_KEY_MISSING`
+  - body con el contrato legacy actual del middleware:
+
+```json
+{
+  "error": "string"
+}
+```
 - Respuesta de error de dominio:
   - mantiene el contrato legacy actual
   - status `error.status` cuando el error es `BankImportError`, en otro caso `503`
