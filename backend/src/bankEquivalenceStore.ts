@@ -5,6 +5,7 @@ import {
   readJsonFile,
   writeJsonFileAtomic,
 } from './infrastructure/storage/fileStoreUtils.js'
+import { withFileLock } from './infrastructure/storage/fileStoreLock.js'
 import type { BankImportBankId, BankImportMappingSheet } from './types.js'
 
 type MappingSheetKey = BankImportMappingSheet['key']
@@ -29,7 +30,43 @@ type StoredBankEquivalenceOverrideFile = {
 }
 
 export function loadBankEquivalenceOverrides() {
-  const parsed = readJsonFile<Partial<StoredBankEquivalenceOverrideFile>>(resolveOverrideStorePath(), {
+  return loadOverridesFromPath(resolveOverrideStorePath())
+}
+
+export function upsertBankEquivalenceOverride(
+  input: Omit<StoredBankEquivalenceOverride, 'createdAtUtc' | 'updatedAtUtc'>,
+) {
+  const storePath = resolveOverrideStorePath()
+
+  return withFileLock(storePath, () => {
+    const currentItems = loadOverridesFromPath(storePath)
+    const now = new Date().toISOString()
+    const existingIndex = currentItems.findIndex(
+      (item) =>
+        item.bankId === input.bankId &&
+        item.sourceProfileId === input.sourceProfileId &&
+        item.mappingSheetKey === input.mappingSheetKey &&
+        item.normalizedCounterpartyName === input.normalizedCounterpartyName,
+    )
+
+    const nextItem: StoredBankEquivalenceOverride = {
+      ...input,
+      createdAtUtc: existingIndex >= 0 ? currentItems[existingIndex].createdAtUtc : now,
+      updatedAtUtc: now,
+    }
+
+    const nextItems =
+      existingIndex >= 0
+        ? currentItems.map((item, index) => (index === existingIndex ? nextItem : item))
+        : [...currentItems, nextItem]
+
+    persistOverrides(storePath, nextItems)
+    return nextItem
+  })
+}
+
+function loadOverridesFromPath(storePath: string) {
+  const parsed = readJsonFile<Partial<StoredBankEquivalenceOverrideFile>>(storePath, {
     version: 2,
     items: [],
   })
@@ -43,40 +80,11 @@ export function loadBankEquivalenceOverrides() {
     .filter((item): item is StoredBankEquivalenceOverride => item !== null)
 }
 
-export function upsertBankEquivalenceOverride(
-  input: Omit<StoredBankEquivalenceOverride, 'createdAtUtc' | 'updatedAtUtc'>,
-) {
-  const currentItems = loadBankEquivalenceOverrides()
-  const now = new Date().toISOString()
-  const existingIndex = currentItems.findIndex(
-    (item) =>
-      item.bankId === input.bankId &&
-      item.sourceProfileId === input.sourceProfileId &&
-      item.mappingSheetKey === input.mappingSheetKey &&
-      item.normalizedCounterpartyName === input.normalizedCounterpartyName,
-  )
-
-  const nextItem: StoredBankEquivalenceOverride = {
-    ...input,
-    createdAtUtc: existingIndex >= 0 ? currentItems[existingIndex].createdAtUtc : now,
-    updatedAtUtc: now,
-  }
-
-  const nextItems =
-    existingIndex >= 0
-      ? currentItems.map((item, index) => (index === existingIndex ? nextItem : item))
-      : [...currentItems, nextItem]
-
-  persistOverrides(nextItems)
-  return nextItem
-}
-
-function persistOverrides(items: StoredBankEquivalenceOverride[]) {
+function persistOverrides(storePath: string, items: StoredBankEquivalenceOverride[]) {
   const payload: StoredBankEquivalenceOverrideFile = {
     version: 2,
     items,
   }
-  const storePath = resolveOverrideStorePath()
 
   createBackupFile(storePath)
   writeJsonFileAtomic(storePath, payload)
