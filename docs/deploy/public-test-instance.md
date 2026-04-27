@@ -354,6 +354,46 @@ Hallazgo real detectado durante la prueba:
 - el fix quedo documentado y aplicado en esta rama con `fix: restore inventario route dependencies`
 - la prueba aislada sirvio para detectar y corregir el bug sin tocar el repo privado ni produccion
 
+## Validación real en NAS — 2026-04-27
+
+Resultado confirmado despues del ajuste del gate web:
+
+- contenedor: `shq-public-test`
+- puerto publicado: `0.0.0.0:8090->3000/tcp`
+- URLs validadas:
+  - `http://127.0.0.1:8090/api/health`
+  - `http://192.168.1.77:8090/api/health`
+  - `http://192.168.1.63:8090/api/health`
+- URL principal para usuario:
+  - `http://192.168.1.77:8090`
+  - `http://192.168.1.77:8090/#/lab`
+- respuesta de healthcheck observada:
+
+```json
+{"status":"ok","service":"netsuite-recon-backend","timestampUtc":"2026-04-27T12:22:24.317Z"}
+```
+
+- smoke test validado:
+  - `node tools/verify-public-test.mjs http://192.168.1.77:8090`
+  - resultado: `OK`
+  - checks confirmados:
+    - `GET /api/health`: OK
+    - `GET /`: OK
+    - ruta protegida sin key: `401` con `INTERNAL_API_KEY_INVALID`
+    - ruta protegida con dummy key y body invalido: `400` con `BANK_ANALYSIS_START_VALIDATION_ERROR`
+    - bundle frontend con dummy `VITE_INTERNAL_API_KEY`: OK
+- instancias existentes intactas:
+  - `netsuite-recon` sigue en `3000`
+  - `supplai-app-1` sigue en `8088`
+- repo privado no tocado
+- produccion no tocada
+
+Con esta validacion, el gate web de `PR #81` ya no queda solo en localhost:
+
+- `127.0.0.1` sigue siendo util para smoke tests locales
+- la validacion real para usuario queda respaldada por la URL de NAS `http://192.168.1.77:8090`
+- el dummy `VITE_INTERNAL_API_KEY` sigue siendo aceptable solo para laboratorio; no debe reutilizarse en produccion
+
 ## Comandos utiles para comprobar que no se toco la instancia actual
 
 ### Windows / PowerShell
