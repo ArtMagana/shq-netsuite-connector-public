@@ -15,6 +15,6 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       APP_PUBLIC_BASE_URL: http://YOUR-NAS-OR-IP:8090
-      ALLOWED_ORIGINS: http://localhost:8090,http://127.0.0.1:8090,http://YOUR-NAS-OR-IP:8090
+      ALLOWED_ORIGINS: http://localhost:8090,http://127.0.0.1:8090,http://192.168.1.77:8090,http://192.168.1.63:8090,http://100.69.127.74:8090
       JSON_BODY_LIMIT: 1mb
       INTERNAL_API_KEY: dummy-public-test-key
