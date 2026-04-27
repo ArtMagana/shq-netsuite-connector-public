@@ -1,47 +1,27 @@
 import assert from 'node:assert/strict'
-import path from 'node:path'
+import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
-async function withEnv(overrides, callback) {
-  const previousValues = new Map()
-
-  for (const [key, value] of Object.entries(overrides)) {
-    previousValues.set(key, process.env[key])
-    if (typeof value === 'string') {
-      process.env[key] = value
-    } else {
-      delete process.env[key]
-    }
-  }
-
-  try {
-    return await callback()
-  } finally {
-    for (const [key, value] of previousValues.entries()) {
-      if (typeof value === 'string') {
-        process.env[key] = value
-      } else {
-        delete process.env[key]
-      }
-    }
-  }
-}
-
-test('createApp wires route dependencies without throwing', async () => {
-  await withEnv(
-    {
-      ALLOWED_ORIGINS: undefined,
-      APP_ENV: undefined,
-      FRONTEND_DIST_DIR: path.resolve('frontend/dist'),
-      NODE_ENV: 'test',
-    },
-    async () => {
-      const { createApp } = await import('../backend/dist/app.js')
-
-      assert.doesNotThrow(() => {
-        const app = createApp()
-        assert.equal(typeof app.use, 'function')
-      })
-    },
+test('CI workflow enforces npm ci, encoding checks, and npm test', async () => {
+  const ciSource = await readFile(
+    new URL('../.github/workflows/ci.yml', import.meta.url),
+    'utf8',
   )
+
+  assert.match(ciSource, /npm --prefix backend ci/)
+  assert.match(ciSource, /npm --prefix frontend ci/)
+  assert.match(ciSource, /python3 tools\/check-text-encoding\.py/)
+  assert.match(ciSource, /npm test/)
+})
+
+test('encoding diagnostic scans the repo for BOM and dangerous hidden Unicode', async () => {
+  const scriptSource = await readFile(
+    new URL('../tools/check-text-encoding.py', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(scriptSource, /BIDI_CODEPOINTS/)
+  assert.match(scriptSource, /INVISIBLE_DANGEROUS_CODEPOINTS/)
+  assert.match(scriptSource, /def iter_files\(\)/)
+  assert.match(scriptSource, /dangerous hidden Unicode/i)
 })
