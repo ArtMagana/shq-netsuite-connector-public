@@ -11,7 +11,7 @@
     "dev:backend": "npm --prefix backend run dev",
     "prebuild": "npm --prefix backend run build",
     "build": "npm --prefix frontend run build",
-    "test": "node --test tests/backend-safety.test.mjs",
+    "test": "node --test tests/*.test.mjs",
     "prelint": "npm --prefix backend run lint",
     "lint": "npm --prefix frontend run lint"
   }
