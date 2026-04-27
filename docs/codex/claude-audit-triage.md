@@ -43,9 +43,9 @@ Este documento convierte la auditoria de Claude en un plan incremental para el r
 - Diagnostico: varios stores JSON hacen `read/modify/write` sincronico sin atomicidad ni locks.
 - Estado actual real del repo: `bankAnalysisRunStore.ts`, `bankWorkingFileStore.ts`, stores SAT y NetSuite persisten directo a disco.
 - Riesgo si se implementa de golpe: alto si se migran todos los stores juntos o se introduce locking sin pilotear rutas de error y recovery.
-- Propuesta incremental: documentar primero el patron comun, elegir un store piloto y luego agregar helper base + atomic write + backup.
-- Primer PR recomendado: utilidad base de file store y migracion piloto de `bankAnalysisRunStore.ts`.
-- Archivos candidatos: `backend/src/*Store.ts`, `docs/codex/file-store-reliability-plan.md`.
+- Propuesta incremental: tratarlo en una rama y PR separados, fuera de este corte documental de arquitectura general.
+- Primer PR recomendado: no incluirlo aqui; manejarlo como spike independiente de file-store reliability.
+- Archivos candidatos: `backend/src/*Store.ts`.
 - Validaciones necesarias: backend build, tests de persistencia en temp dir, diff check, CI verde.
 
 ## Bank import consistency / event sourcing
@@ -154,7 +154,7 @@ Este documento convierte la auditoria de Claude en un plan incremental para el r
 - Estado actual real del repo: ya existe compose de laboratorio en `deploy/test/docker-compose.public-test.yml`, pero no una estrategia general de `DATA_DIR`.
 - Riesgo si se implementa de golpe: medio-alto; mover rutas de store sin plan puede romper archivos existentes o healthchecks.
 - Propuesta incremental: documentar primero los stores y luego introducir `DATA_DIR` solo para rutas de persistencia nuevas o piloto.
-- Primer PR recomendado: plan de file store + convencion de data root sin cambiar deploy actual.
+- Primer PR recomendado: plan de environment validation y data root, dejando file-store reliability para su PR separado.
 - Archivos candidatos: `Dockerfile`, `deploy/test/docker-compose.public-test.yml`, `backend/src/*Store.ts`.
 - Validaciones necesarias: docker build, arranque de instancia aislada, compatibilidad con rutas dummy, CI verde.
 
