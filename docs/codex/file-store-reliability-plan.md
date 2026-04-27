@@ -263,6 +263,7 @@ Alcance deliberadamente limitado:
 - el path se resuelve en cada `load` y `persist` con `resolveOverrideStorePath()`
 - esto mantiene el comportamiento por defecto, pero hace viable probar el store con `BANKS_EQUIVALENCE_OVERRIDE_STORE_PATH` temporal
 - no se cambio el nombre del archivo real ni su ubicacion por defecto
+- el `upsert` del store piloto ahora queda protegido por un lock local durante todo el ciclo `read-modify-write`
 
 ## Estrategia de backup
 
@@ -285,9 +286,10 @@ Estado actual:
 
 - se implemento un prototipo de locking local en `backend/src/infrastructure/storage/fileStoreLock.ts`
 - el helper usa `${filePath}.lock` y `fs.openSync(..., 'wx')`
-- el lock guarda metadata minima con `pid` y timestamp
+- el lock guarda metadata minima con `lockId`, `pid`, `filePath` y timestamp
+- el release valida ownership por `lockId` antes de borrar
 - el cleanup ocurre en `finally`
-- si encuentra un lock stale por edad, intenta limpiarlo antes de reintentar
+- si encuentra un lock stale por edad, relee el snapshot antes de intentar limpiarlo
 
 Lo que aun no hace:
 
@@ -295,6 +297,7 @@ Lo que aun no hace:
 - no resuelve coordinacion distribuida fuera del filesystem del laboratorio
 - no ofrece observabilidad ni metricas de contencion
 - no rota ni audita locks stale mas alla de su remocion basica
+- no evita bloqueo del event loop mientras espera el lock
 
 Orden recomendado despues de este prototipo:
 
@@ -373,9 +376,8 @@ Recomendacion actual:
 
 - el helper de lock si tiene cobertura directa de exclusividad, timeout y cleanup
 - `bankEquivalenceStore` tiene cobertura de integracion para stale lock y persistencia final
-- no se agrego todavia un test determinista de `upserts` concurrentes multi-proceso sobre el store
-- se pospuso porque el API actual es sincrono y una prueba con timing artificial seria mas fragil que util en esta fase
-- la siguiente iteracion puede introducir un harness de procesos controlado si hace falta validar contencion real del store
+- ahora tambien hay un test multi-proceso que lanza varios workers Node sobre el mismo archivo temporal y verifica que no se pierdan registros
+- ese test cubre el caso objetivo del prototipo, pero sigue siendo un smoke test de laboratorio, no una prueba exhaustiva de todos los stores ni de todos los filesystems
 
 ## Stores pendientes prioritarios
 
@@ -406,14 +408,15 @@ Motivo:
 - solo `bankEquivalenceStore` usa locking
 - los demas stores siguen con read/modify/write legacy
 - `createBackupFile(...)` usa un solo `.bak` y no tiene rotacion
-- no hay prueba multi-proceso determinista sobre el store piloto
+- el stale cleanup sigue siendo heuristico y depende de `mtime`
+- el lock manual sincrono puede bloquear el proceso bajo contencion
 - la mayoria de loaders legacy siguen haciendo silent catch
 
 ## Proxima fase recomendada
 
 1. validar el prototipo de locking en el laboratorio NAS/Docker
 2. decidir si conviene mantener lock manual o evaluar `proper-lockfile`
-3. agregar un harness de concurrencia multi-proceso para el store piloto
+3. observar si el test multi-proceso y el laboratorio NAS detectan problemas de stale lock o permisos
 4. definir retencion de backups `.bak`
 5. migrar stores de riesgo bajo-medio de forma gradual
 6. definir estrategia de recuperacion para JSON corrupto

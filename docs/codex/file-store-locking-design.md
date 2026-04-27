@@ -103,10 +103,42 @@ Contras:
 
 ## Mitigaciones propuestas
 
-- metadata minima dentro del `.lock` con `pid` y timestamp
+- metadata minima dentro del `.lock` con `lockId`, `pid`, `filePath` y timestamp
 - timeout corto de espera para fallar de forma explicita
-- remocion de stale locks por edad configurable
+- validacion de ownership antes de liberar el lock
+- remocion de stale locks por edad configurable con doble lectura antes del delete
 - tests en temp dirs para asegurar cleanup y exclusividad basica
+
+## Implementacion actual del prototipo
+
+- `withFileLock(...)` sigue siendo sincrono para encajar con stores sincronos existentes
+- el helper crea `${filePath}.lock`
+- la adquisicion usa `fs.openSync(lockPath, 'wx')`
+- el metadata del lock incluye `lockId`, `pid`, `filePath` y `createdAtUtc`
+- `releaseLock(...)` relee el metadata y solo borra el lock si el `lockId` coincide
+- el cleanup de stale lock relee el archivo antes del delete para bajar el riesgo de borrar un lock recien reemplazado
+
+## Limites del ownership actual
+
+- el ownership check evita borrar un lock ajeno si el archivo ya fue reemplazado antes de `release`
+- no garantiza un compare-and-delete atomico a nivel filesystem
+- si otro proceso reemplazara el lock exactamente entre la verificacion y el `rmSync`, el prototipo no puede impedirlo con este enfoque manual
+- ese limite sigue siendo aceptable solo para laboratorio y debe revisarse antes de pensar en un uso mas amplio
+
+## Limites del stale cleanup actual
+
+- el prototipo usa antiguedad por `mtime` para considerar un lock stale
+- relee el lock antes de borrarlo para reducir falsos positivos
+- si el filesystem ofrece resolucion pobre de timestamps o semantica rara en un share remoto, el riesgo no desaparece por completo
+- metadata invalida no rompe el flujo; si el lock ya es stale, el helper puede limpiarlo usando el snapshot observado
+
+## Limite de bloqueo del event loop
+
+- el helper usa `Atomics.wait(...)` como espera bloqueante entre reintentos
+- durante esa espera, el event loop del proceso queda bloqueado
+- eso solo es aceptable aqui porque el prototipo opera sobre stores locales pequenos y callbacks cortos
+- no debe usarse para operaciones largas ni para rutas con alta contencion
+- los timeouts deben mantenerse cortos para que el bloqueo sea acotado
 
 ## Primer store candidato
 
