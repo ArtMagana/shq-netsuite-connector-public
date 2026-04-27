@@ -25,6 +25,7 @@ test('architecture roadmap docs exist and keep file-store work out of this PR', 
 
   assert.match(triageSource, /## File locks \/ file stores/)
   assert.match(triageSource, /tratarlo en una rama y PR separados/)
+  assert.match(triageSource, /#85.*CI \+ encoding guardrails/s)
 
   await assert.rejects(
     access(new URL('../docs/codex/file-store-reliability-plan.md', import.meta.url)),

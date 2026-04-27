@@ -4,6 +4,21 @@
 
 Este documento convierte la auditoria de Claude en un plan incremental para el repo publico laboratorio. No aplica sus recomendaciones de golpe; las clasifica segun el estado real del repo y el riesgo de implementarlas literalmente.
 
+## Estado de la serie de PRs
+
+Antes de este corte documental, los cambios seguros de laboratorio ya quedaron separados en PRs pequenos:
+
+- `#85`: CI + encoding guardrails
+- `#86`: HTTP error contracts + internal API key codes
+- `#87`: bancos route hardening/documentation
+- `#88`: frontend `httpClient` structured errors
+
+Este PR `#89` queda intencionalmente como docs-only:
+
+- no repite file-store locking/reliability
+- no reabre cambios funcionales
+- solo deja roadmap y triage para trabajo posterior
+
 ## OAuth token encryption
 
 - Clasificacion: valido y urgente.
