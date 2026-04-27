@@ -1,6 +1,10 @@
-import fs from 'node:fs'
 import path from 'node:path'
 
+import {
+  createBackupFile,
+  readJsonFile,
+  writeJsonFileAtomic,
+} from './infrastructure/storage/fileStoreUtils.js'
 import type { BankImportBankId, BankImportMappingSheet } from './types.js'
 
 type MappingSheetKey = BankImportMappingSheet['key']
@@ -24,28 +28,19 @@ type StoredBankEquivalenceOverrideFile = {
   items: StoredBankEquivalenceOverride[]
 }
 
-const OVERRIDE_STORE_PATH =
-  process.env.BANKS_EQUIVALENCE_OVERRIDE_STORE_PATH?.trim() ||
-  path.join(process.env.LOCALAPPDATA || process.cwd(), 'netsuite-recon', 'bank-equivalence-overrides.json')
-
 export function loadBankEquivalenceOverrides() {
-  if (!fs.existsSync(OVERRIDE_STORE_PATH)) {
+  const parsed = readJsonFile<Partial<StoredBankEquivalenceOverrideFile>>(resolveOverrideStorePath(), {
+    version: 2,
+    items: [],
+  })
+
+  if (!Array.isArray(parsed.items)) {
     return []
   }
 
-  try {
-    const raw = fs.readFileSync(OVERRIDE_STORE_PATH, 'utf8')
-    const parsed = JSON.parse(raw) as Partial<StoredBankEquivalenceOverrideFile>
-    if (!Array.isArray(parsed.items)) {
-      return []
-    }
-
-    return parsed.items
-      .map(normalizeStoredOverride)
-      .filter((item): item is StoredBankEquivalenceOverride => item !== null)
-  } catch {
-    return []
-  }
+  return parsed.items
+    .map(normalizeStoredOverride)
+    .filter((item): item is StoredBankEquivalenceOverride => item !== null)
 }
 
 export function upsertBankEquivalenceOverride(
@@ -77,15 +72,14 @@ export function upsertBankEquivalenceOverride(
 }
 
 function persistOverrides(items: StoredBankEquivalenceOverride[]) {
-  const directoryPath = path.dirname(OVERRIDE_STORE_PATH)
-  fs.mkdirSync(directoryPath, { recursive: true })
-
   const payload: StoredBankEquivalenceOverrideFile = {
     version: 2,
     items,
   }
+  const storePath = resolveOverrideStorePath()
 
-  fs.writeFileSync(OVERRIDE_STORE_PATH, JSON.stringify(payload, null, 2), 'utf8')
+  createBackupFile(storePath)
+  writeJsonFileAtomic(storePath, payload)
 }
 
 function isStoredOverride(value: unknown): value is StoredBankEquivalenceOverride {
@@ -153,4 +147,11 @@ function resolveLegacySourceProfileId(bankId: BankImportBankId, mappingSheetKey:
   }
 
   return 'payana_transacciones'
+}
+
+function resolveOverrideStorePath() {
+  return (
+    process.env.BANKS_EQUIVALENCE_OVERRIDE_STORE_PATH?.trim() ||
+    path.join(process.env.LOCALAPPDATA || process.cwd(), 'netsuite-recon', 'bank-equivalence-overrides.json')
+  )
 }
