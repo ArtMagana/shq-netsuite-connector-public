@@ -213,6 +213,19 @@ Casos cubiertos:
 - `createBackupFile` crea `.bak` si existe archivo original
 - `createBackupFile` no falla si el archivo no existe
 
+### Tests del store migrado
+
+Archivo:
+
+- `tests/bank-equivalence-store.test.mjs`
+
+Casos cubiertos:
+
+- `loadBankEquivalenceOverrides` devuelve `[]` si no existe archivo
+- `upsertBankEquivalenceOverride` crea archivo `version: 2` con timestamps
+- un segundo `upsert` del mismo item no duplica registros y genera `.bak`
+- un JSON corrupto lanza error explicito con el path del archivo
+
 ### Store migrado en este prototipo
 
 - `backend/src/bankEquivalenceStore.ts`
@@ -223,6 +236,7 @@ Cambio aplicado:
 - escritura directa sustituida por:
   - `createBackupFile(...)`
   - `writeJsonFileAtomic(...)`
+- resolucion del path movida a `resolveOverrideStorePath()` por llamada
 
 Motivo de seleccion:
 
@@ -238,6 +252,13 @@ Alcance deliberadamente limitado:
 - no cambia nombre de archivo
 - no introduce locking
 - no intenta migrar mas stores en esta rama
+
+## Diseno actual del path del store
+
+- `bankEquivalenceStore` ya no fija el path del archivo solo al cargar el modulo
+- el path se resuelve en cada `load` y `persist` con `resolveOverrideStorePath()`
+- esto mantiene el comportamiento por defecto, pero hace viable probar el store con `BANKS_EQUIVALENCE_OVERRIDE_STORE_PATH` temporal
+- no se cambio el nombre del archivo real ni su ubicacion por defecto
 
 ## Estrategia de backup
 
