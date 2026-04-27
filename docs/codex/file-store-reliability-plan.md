@@ -410,6 +410,7 @@ Motivo:
 - `createBackupFile(...)` usa un solo `.bak` y no tiene rotacion
 - el stale cleanup sigue siendo heuristico y depende de `mtime`
 - el lock manual sincrono puede bloquear el proceso bajo contencion
+- si un callback protegido supera `staleAfterMs`, otro proceso podria interpretar el lock como stale aunque siga activo
 - la mayoria de loaders legacy siguen haciendo silent catch
 
 ## Proxima fase recomendada

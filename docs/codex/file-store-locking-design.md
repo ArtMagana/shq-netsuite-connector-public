@@ -132,6 +132,18 @@ Contras:
 - si el filesystem ofrece resolucion pobre de timestamps o semantica rara en un share remoto, el riesgo no desaparece por completo
 - metadata invalida no rompe el flujo; si el lock ya es stale, el helper puede limpiarlo usando el snapshot observado
 
+## Riesgo especifico para callbacks largos
+
+- `withFileLock(...)` no debe usarse para callbacks largos
+- si un callback tarda mas que `staleAfterMs`, otro proceso podria interpretar el lock como stale aunque siga activo
+- eso vuelve inseguro este enfoque para operaciones de larga duracion o rutas con trabajo pesado dentro del callback
+- el prototipo solo es aceptable para callbacks cortos y sin I/O prolongado, como `bankEquivalenceStore.upsert`
+- para operaciones largas o stores mas sensibles se deberia evaluar:
+  - heartbeat o refresh del lock
+  - aumentar `staleAfterMs` con criterio operativo
+  - `proper-lockfile`
+  - o una estrategia de cola / proceso unico
+
 ## Limite de bloqueo del event loop
 
 - el helper usa `Atomics.wait(...)` como espera bloqueante entre reintentos
@@ -158,3 +170,9 @@ Motivos:
 - no resolver merges semanticos
 - no tocar produccion ni integraciones reales
 - no introducir colas distribuidas ni coordinacion entre servicios
+
+## Nota de verificacion de hidden Unicode
+
+- se escaneo explicitamente el diff del PR #83 y los archivos modificados del prototipo
+- ese scan no encontro BOM, bidi controls, zero-width chars, soft hyphen ni `U+FEFF`
+- GitHub UI puede seguir mostrando un warning generico de hidden Unicode, pero el scan reproducible del diff y de los archivos no encontro caracteres ocultos peligrosos
