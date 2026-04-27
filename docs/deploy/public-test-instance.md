@@ -28,6 +28,20 @@ Si hoy existe una app en `8088`, debe quedarse intacta.
 - No reutilices el puerto `8088`.
 - No hagas merge a `main` para probar.
 
+## Definition of Done para cambios revisables por web
+
+Una tarea no debe considerarse cerrada solo por build o CI. Para que un cambio quede revisable por web, debe existir:
+
+- PR abierto en draft o listo para revision, segun corresponda.
+- GitHub Actions CI en verde.
+- deploy aislado en `shq-public-test` o equivalente de laboratorio, separado del repo privado y de produccion.
+- URL de prueba entregada.
+- `GET /api/health` respondiendo OK.
+- UI abriendo correctamente en la URL de prueba.
+- smoke test basico de rutas publicas OK.
+- validacion de al menos un endpoint protegido con dummy API key si aplica.
+- confirmacion explicita de que `supplai-app-1`, `netsuite-recon` u otra instancia existente no cambiaron.
+
 ## Camino 1: prueba local en Windows / PowerShell
 
 ### 1. Crear una carpeta separada
@@ -109,12 +123,20 @@ VITE_INTERNAL_API_KEY=dummy-public-test-key
 
 Eso es opcional. Para abrir la UI y comprobar `healthcheck`, no es obligatorio.
 
+Alternativa sin archivos locales extra:
+
+- exportar `VITE_API_BASE_URL=/api`
+- exportar `VITE_INTERNAL_API_KEY=dummy-public-test-key`
+- compilar frontend con esas variables de entorno
+
 ### 4. Instalar dependencias y compilar
 
 ```powershell
 npm --prefix backend ci
 npm --prefix frontend ci
 npm --prefix backend run build
+$env:VITE_API_BASE_URL='/api'
+$env:VITE_INTERNAL_API_KEY='dummy-public-test-key'
 npm --prefix frontend run build
 git diff --check
 python tools/check-text-encoding.py
@@ -131,6 +153,7 @@ npm --prefix backend run start
 Con `PORT=8090`, la app deberia quedar en:
 
 - `http://127.0.0.1:8090`
+- diagnostico ligero: `http://127.0.0.1:8090/#/lab`
 
 ### 6. Validar que la prueba es aislada
 
@@ -147,6 +170,10 @@ Que revisar:
 - `8090` debe corresponder a la app de prueba.
 - `8088` no debe ser reutilizado por esta prueba.
 - Si ya habia una instancia en `8088`, debe seguir intacta.
+- `/#/lab` debe mostrar:
+  - `Healthcheck OK`
+  - `Ambiente: public-test / lab`
+  - `Frontend internal API key: Configured`
 
 ### 7. Como apagarla
 
@@ -166,6 +193,7 @@ Ese compose:
 - no usa `deploy/nas/netsuite-recon.env`
 - no monta rutas reales de produccion
 - no incluye secretos
+- inyecta `VITE_API_BASE_URL=/api` y `VITE_INTERNAL_API_KEY=dummy-public-test-key` como build args de laboratorio para el frontend
 
 ### 1. Crear una carpeta separada en NAS o servidor
 
@@ -201,6 +229,7 @@ docker compose -f deploy/test/docker-compose.public-test.yml -p shq-public-test 
 docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 docker compose -f deploy/test/docker-compose.public-test.yml -p shq-public-test ps
 curl http://127.0.0.1:8090/api/health
+node tools/verify-public-test.mjs http://127.0.0.1:8090
 ```
 
 Que revisar:
@@ -210,6 +239,7 @@ Que revisar:
 - el puerto publicado debe ser `8090`
 - la instancia existente no debe cambiar de nombre ni de puerto
 - si ya habia algo en `8088`, debe seguir igual
+- `http://127.0.0.1:8090/#/lab` debe abrir el panel de diagnostico del laboratorio web
 
 ### 5. Como apagarla
 
@@ -229,6 +259,13 @@ APP_PUBLIC_BASE_URL=http://127.0.0.1:8090
 ALLOWED_ORIGINS=http://127.0.0.1:8090,http://localhost:8090
 JSON_BODY_LIMIT=1mb
 INTERNAL_API_KEY=dummy-public-test-key
+```
+
+Build args de laboratorio para Docker:
+
+```dotenv
+VITE_API_BASE_URL=/api
+VITE_INTERNAL_API_KEY=dummy-public-test-key
 ```
 
 Para prueba local fuera de Docker, `PORT=8090`.
@@ -255,6 +292,7 @@ Variables que pueden quedarse vacias o sin configurar para una prueba de UI y `h
 - la app levanta en `8090`
 - `GET /api/health` responde
 - la UI abre en la URL de prueba
+- `node tools/verify-public-test.mjs http://127.0.0.1:8090` pasa
 - el repo privado no fue tocado
 - la instancia actual en `8088` sigue intacta
 - no hay `.env` reales copiados
@@ -289,6 +327,7 @@ Hallazgo real detectado durante la prueba:
 git remote -v
 Get-NetTCPConnection -LocalPort 8088,8090 -State Listen -ErrorAction SilentlyContinue
 Invoke-WebRequest http://127.0.0.1:8090/api/health | Select-Object -ExpandProperty Content
+node tools/verify-public-test.mjs http://127.0.0.1:8090
 ```
 
 ### Docker / NAS
@@ -297,6 +336,7 @@ Invoke-WebRequest http://127.0.0.1:8090/api/health | Select-Object -ExpandProper
 docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 docker compose -f deploy/test/docker-compose.public-test.yml -p shq-public-test ps
 curl http://127.0.0.1:8090/api/health
+node tools/verify-public-test.mjs http://127.0.0.1:8090
 ```
 
 ## Que NO hacer
