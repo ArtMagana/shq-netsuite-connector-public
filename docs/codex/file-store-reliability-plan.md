@@ -175,6 +175,28 @@ Cobertura actual:
 - escritura por archivo temporal + rename
 - backup `.bak` optativo antes de sobrescribir
 
+## Limitaciones actuales del prototipo
+
+Este prototipo si mejora:
+
+- escritura atomica con archivo temporal + `rename`
+- backup previo al write
+- errores explicitos de parseo JSON
+- formato JSON estable con newline final
+
+Este prototipo no resuelve todavia:
+
+- `lost updates` por concurrencia `read-modify-write`
+- locking entre procesos
+- retencion historica de backups
+- recuperacion automatica de JSON corrupto
+- migracion de todos los stores
+
+En otras palabras:
+
+- reduce el riesgo de truncado y de overwrite sin respaldo inmediato
+- no elimina el problema de dos procesos leyendo el mismo estado viejo y escribiendo despues
+
 ### Tests agregados
 
 Archivo:
@@ -219,9 +241,18 @@ Alcance deliberadamente limitado:
 
 ## Estrategia de backup
 
-- crear backup solo antes de sobrescribir un archivo existente
-- usar sufijo con timestamp UTC o contador
-- rotar a un numero pequeno, por ejemplo 3 backups
+- decision de esta pasada: mantener un solo backup `.bak`
+- el `.bak` representa el snapshot inmediato anterior del archivo antes del ultimo write exitoso
+- no hay retencion historica ni timestamp en esta fase
+- se eligio esta opcion porque:
+  - reduce complejidad
+  - no cambia naming ni limpieza de archivos
+  - sigue siendo suficiente para validar el patron de backup previo a escritura
+
+Lo que implica:
+
+- cada nueva escritura puede sobrescribir el backup anterior
+- el `.bak` no sirve como historico largo ni auditoria de cambios
 
 ## Estrategia de locking
 
@@ -237,6 +268,54 @@ Orden recomendado:
 Motivo:
 
 - meter locks primero complica recovery y portabilidad Docker/NAS
+
+## Proxima fase recomendada: locking real
+
+Opciones razonables para la siguiente fase:
+
+### `proper-lockfile`
+
+Pros:
+
+- resuelve locking de archivos con una libreria conocida
+- reduce trabajo manual de retry/unlock
+- puede acelerar una migracion gradual store por store
+
+Contras:
+
+- agrega dependencia nueva
+- hay que validar bien su comportamiento en Docker/NAS y shares de red
+- requiere definir timeouts, stale locks y recovery
+
+### lockfile manual con apertura exclusiva
+
+Pros:
+
+- sin dependencia externa
+- control total del formato del lock y de la estrategia de expiracion
+
+Contras:
+
+- mas facil equivocarse en edge cases
+- mas trabajo de mantenimiento
+- recovery de locks huerfanos queda totalmente a cargo del repo
+
+### cola por proceso
+
+Pros:
+
+- simple dentro de un solo proceso Node
+- baja el riesgo de colisiones internas sin tocar filesystem locking aun
+
+Contras:
+
+- no protege contra multiples procesos o multiples contenedores
+- en Docker/NAS solo cubre una parte del problema real
+
+Recomendacion actual:
+
+- si el siguiente experimento sigue en el repo publico laboratorio, la mejor opcion para evaluar primero es `proper-lockfile`
+- si la compatibilidad Docker/NAS genera dudas, hacer un spike pequeno comparando `proper-lockfile` vs lock manual antes de migrar stores adicionales
 
 ## Validaciones y tests recomendados
 
