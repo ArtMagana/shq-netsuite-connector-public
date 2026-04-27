@@ -91,6 +91,8 @@ Resultado de arranque:
 ### Guardrails y CI
 
 - CI sigue usando `npm --prefix backend ci` y `npm --prefix frontend ci`.
+- `.github/workflows/ci.yml` ya usa `actions/checkout@v5` y `actions/setup-node@v5`.
+- El runtime de build de la app en CI se mantiene en Node 22 por ahora.
 - CI ahora ejecuta `python3 tools/check-text-encoding.py`.
 - CI ahora tambien ejecuta `npm test` despues del build para correr la cobertura minima de seguridad.
 - El ultimo GitHub Actions CI del PR esta en verde.
@@ -98,6 +100,18 @@ Resultado de arranque:
   - BOM
   - caracteres bidireccionales ocultos
   - caracteres invisibles peligrosos
+- El chequeo de encoding ahora cubre:
+  - `.github/workflows/*.yml`
+  - `.gitignore`
+  - `package.json`
+  - `backend/src/**/*.ts`
+  - `frontend/src/**/*.ts`
+  - `frontend/src/**/*.tsx`
+  - `tests/**/*.mjs`
+  - `tools/**/*.py`
+  - `deploy/**/*.yml`
+  - `docs/**/*.md`
+- El script excluye `node_modules`, `dist`, `build`, caches y otros directorios generados.
 - No se agrego script root `check:encoding` en `package.json`.
   - se intento un fallback `python || python3`
   - se descarto porque no fue seguro en PowerShell
@@ -174,10 +188,17 @@ Resultado de arranque:
   - `isBancosAnalysisStartRequest(...)`
   - `validateBody(...)`
   - `requireInternalApiKey(...)`
+  - smoke test de `createApp()` para detectar wiring roto de rutas
+  - contrato de error de `startBankImportAnalysisRun(...)` en entradas invalidas
+  - estabilidad de `BANK_ANALYZE_VALIDATION_ERROR`
+  - estabilidad de `BANK_ANALYSIS_START_VALIDATION_ERROR`
 - La suite corre sobre `backend/dist` despues del build, sin tocar integraciones reales.
 - Se agrego el script root `npm test`.
 - CI ahora ejecuta esa suite despues del build.
 - La cobertura sigue siendo pequena a proposito; la meta aqui es detectar regresiones obvias de contratos y middleware sin meter un framework grande todavia.
+- Los helpers de frontend `httpErrors.ts` siguen cubiertos solo por build:
+  - la rama no agrega un test runner de frontend
+  - las pruebas de comportamiento de esos helpers deben esperar a una infraestructura de test frontend dedicada
 
 ### Guardrails preventivos para archivos sensibles
 
@@ -199,21 +220,26 @@ Resultado de arranque:
 
 - `npm --prefix backend run build`
 - `npm --prefix frontend run build`
+- `npm test`
 - `git diff --check`
 - `python tools/check-text-encoding.py`
+- scan explicito de `gh pr diff 81`, body del PR y archivos modificados por BOM, bidi, zero-width, soft hyphen y `U+FEFF`
 
 Estado de validacion al momento de esta actualizacion:
 
 - `npm --prefix backend run build`: OK
 - `npm --prefix frontend run build`: OK
+- `npm test`: OK
 - `git diff --check`: OK
 - `python tools/check-text-encoding.py`: OK
+- scan explicito de hidden Unicode: sin hallazgos; GitHub UI puede seguir mostrando un warning generico o stale
 
 ## Pendientes reales despues de esta rama
 
 ### Deuda y riesgos que siguen abiertos
 
 - `backend/src/app.ts` sigue siendo el principal punto de concentracion y conflicto potencial.
+- `PR #81` ya es grande y no conviene seguir creciendo esta rama con cambios funcionales adicionales.
 - Todavia existen rutas legacy que devuelven solo `{ error }` sin `code`.
 - Aunque `basicRoutes.ts` e `inventarioRoutes.ts` ya tipan mejor sus deps, aun quedan contratos de route wiring que dependen de convenciones manuales fuera de esos routers.
 - `internalApiKey.ts` ya tiene `code`, pero el resto del backend no esta estandarizado todavia.
@@ -241,18 +267,6 @@ Estado de validacion al momento de esta actualizacion:
 | `GET /api/bancos/cep/institutions` | Media | `getBanxicoCepInstitutions`, `BanxicoServiceError` | Medio | Mover junto con `cep/status` si se hace un PR de solo lectura CEP |
 | `POST /api/bancos/cep/lookup` | Media-alta | `lookupBanxicoCep`, `BanxicoServiceError` | Medio-alto | Posponer por dependencia externa |
 | `POST /api/bancos/cep/details` | Alta | `requireInternalApiKey`, retry manual, `downloadBanxicoCepDetails`, `upsertBanxicoCepRecognition`, remocion de XML | Alto | Dejar para una fase aislada y con mucha cautela |
-
-Siguiente PR pequeno recomendado:
-
-- mover `GET /api/bancos/pagos-individuales`
-- mover `POST /api/bancos/pagos-individuales/upload`
-
-Motivo:
-
-- comparten dominio
-- no dependen de NetSuite ni Banxico
-- el contrato es simple
-- el diff deberia seguir pequeno y revisable
 
 ### Cambios descartados por riesgo
 
@@ -367,48 +381,85 @@ Conclusiones de esta fase:
 - Refactor masivo de `app.ts`.
 - Cambios de produccion, deploy real o merge a `main`.
 
-## Estrategia de merge recomendada
+## Decision recomendada para PR #81
 
-### Opcion A: merge completo del PR
+### Opcion A: mantener PR #81 como laboratorio y no mergear completo
 
-Ventajas:
+Pros:
 
-- aterriza de una vez los guardrails, contratos HTTP minimos, cierre parcial de `bancos`, readiness de frontend y documentacion
-- evita trabajo adicional de rearmado
-- ya existe CI verde y el PR sigue siendo revisable por commits
+- preserva `#81` como bitacora tecnica del laboratorio publico
+- evita meter un diff muy ancho al repo objetivo de forma apresurada
+- permite seguir usandolo como indice de PRs atomicos posteriores
 
-Riesgos:
+Contras:
 
-- mezcla varios temas en un solo diff
-- obliga a revisar backend, frontend, CI y documentacion en el mismo PR
-- aumenta la carga de contexto para reviewers
+- deja valor util atrapado en una rama draft
+- obliga a rearmar PRs mas pequenos si se quiere aterrizar cambios
 
-### Opcion B: dividir por commits o por bloques tematicos
+### Opcion B: mergear completo despues de revision humana
 
-Bloques naturales:
+Pros:
 
-1. CI y encoding guardrails
-2. HTTP errors e `internalApiKey`
-3. `bancos` router + documentacion API
-4. frontend HTTP helpers/readiness
-5. reporte, roadmap y estrategia
+- aterriza de una sola vez guardrails, contratos HTTP minimos, cierre parcial de `bancos`, readiness de frontend y documentacion
+- evita trabajo manual adicional de rebase o cherry-pick
 
-Ventajas:
+Contras:
+
+- mezcla backend, frontend, CI, tests y documentacion en un mismo diff
+- eleva la carga de revision y rollback
+
+### Opcion C: dividir por bloques
+
+Bloques sugeridos:
+
+1. CI + encoding + `.gitignore`
+2. HTTP contracts + `internalApiKey`
+3. `bancos` router + `docs/api/bancos.md`
+4. frontend HTTP error readiness
+5. tests minimos
+6. docs, roadmaps y lab deploy
+
+Pros:
 
 - reduce el radio de revision por PR
 - permite mergear primero lo menos controversial
 - simplifica rollback selectivo si algo incomoda
 
-Riesgos:
+Contras:
 
-- requiere trabajo manual adicional para rearmar PRs
-- puede introducir costo de coordinacion innecesario si el equipo ya esta comodo revisando por commits
+- requiere trabajo manual adicional para separar commits
+- aumenta el costo de coordinacion si el equipo ya esta comodo revisando por commits
 
 ### Recomendacion final
 
-- Si el equipo quiere velocidad y puede revisar por commits: el merge completo es razonable.
-- Si el equipo prioriza historia mas limpia y menor carga de revision: conviene dividir por bloques tematicos.
-- Recomendacion preferida: revisar este PR por commits y, si aparece resistencia por alcance, dividirlo en bloques tematicos en vez de seguir creciendo esta rama.
+- Si el objetivo es llevar cambios al repo privado con bajo riesgo, conviene dividir por bloques.
+- Si el objetivo es seguir explorando arquitectura en el repo publico, conviene mantener `#81` como laboratorio tecnico y no seguir agrandandolo.
+- Recomendacion preferida: no seguir creciendo `#81`; usarlo como rama cerrada de laboratorio y extraer PRs atomicos desde aqui.
+
+## Siguiente PR recomendado
+
+Titulo sugerido:
+
+- `refactor: move bancos individual payments routes`
+
+Alcance:
+
+- mover `GET /api/bancos/pagos-individuales`
+- mover `POST /api/bancos/pagos-individuales/upload`
+
+Por que este corte es el mejor siguiente paso:
+
+- baja dependencia externa
+- dominio acotado
+- buen siguiente paso para seguir reduciendo `app.ts`
+- evita tocar Banxico/CEP, NetSuite, journals o SAT
+
+Reglas para ese siguiente PR:
+
+- PR separado
+- no hacerlo dentro de `#81`
+- no tocar el repo privado
+- no tocar produccion
 
 ## Roadmap para SaaS interno premium
 

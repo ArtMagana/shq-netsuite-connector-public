@@ -24,7 +24,7 @@ Si hoy existe una app en `8088`, debe quedarse intacta.
 - Trabaja siempre desde un checkout separado del repo publico.
 - No copies `.env` desde el repo privado.
 - No reutilices credenciales reales de NetSuite, SAT, Banxico, bancos o NAS.
-- No montes volumentes ni rutas de produccion.
+- No montes volumenes ni rutas de produccion.
 - No reutilices el puerto `8088`.
 - No hagas merge a `main` para probar.
 
