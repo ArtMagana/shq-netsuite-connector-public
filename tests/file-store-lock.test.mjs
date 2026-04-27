@@ -109,3 +109,55 @@ test('withFileLock removes a stale lock file before entering the callback', () =
     assert.equal(fs.existsSync(lockPath), false)
   })
 })
+
+test('withFileLock does not remove a lock file replaced by another owner before release', () => {
+  withTempDirectory((tempDirectoryPath) => {
+    const filePath = path.join(tempDirectoryPath, 'store.json')
+    const lockPath = resolveLockPath(filePath)
+
+    assert.throws(
+      () =>
+        withFileLock(filePath, () => {
+          fs.rmSync(lockPath)
+          fs.writeFileSync(
+            lockPath,
+            `${JSON.stringify({
+              lockId: 'different-owner',
+              pid: 999,
+              filePath,
+              createdAtUtc: new Date().toISOString(),
+            })}\n`,
+            'utf8',
+          )
+        }),
+      /ownership mismatch/,
+    )
+
+    assert.equal(fs.existsSync(lockPath), true)
+    assert.equal(JSON.parse(fs.readFileSync(lockPath, 'utf8')).lockId, 'different-owner')
+  })
+})
+
+test('withFileLock tolerates stale lock files with unexpected metadata', () => {
+  withTempDirectory((tempDirectoryPath) => {
+    const filePath = path.join(tempDirectoryPath, 'store.json')
+    const lockPath = resolveLockPath(filePath)
+    const staleTimestamp = new Date(Date.now() - 60_000)
+
+    fs.writeFileSync(lockPath, 'not-json\n', 'utf8')
+    fs.utimesSync(lockPath, staleTimestamp, staleTimestamp)
+
+    const result = withFileLock(
+      filePath,
+      () => 'recovered-unexpected-metadata',
+      {
+        retryDelayMs: 5,
+        timeoutMs: 100,
+        staleAfterMs: 50,
+      },
+    )
+
+    assert.equal(result, 'recovered-unexpected-metadata')
+    assert.equal(fs.existsSync(lockPath), false)
+  })
+})
