@@ -290,6 +290,43 @@ Motivo:
 
 - meter locks primero complica recovery y portabilidad Docker/NAS
 
+## Recomendacion de locking
+
+Decision actual:
+
+- no tomar el lock manual de `PR #83` como patron general todavia
+- si se quiere seguir endureciendo JSON stores de riesgo bajo o medio, el siguiente paso recomendado es evaluar `proper-lockfile`
+- para stores criticos o write-heavy, la direccion recomendada ya no es multiplicar lockfiles sino empezar a planear SQLite o un almacenamiento local con transacciones
+
+Siguiente store piloto sugerido:
+
+- `backend/src/bankBalanceValidationStore.ts`
+
+Motivos:
+
+- pequeno
+- sin secretos ni base64
+- `read-modify-write` claro
+- mismo dominio de bancos que el piloto anterior
+- facil de testear con archivos temporales
+
+Stores que no conviene usar como siguiente piloto:
+
+- `bankWorkingFileStore.ts`
+- `bankIndividualPaymentStore.ts`
+- `bankAnalysisRunStore.ts`
+- `satDownloadHistoryStore.ts`
+- `satManualHomologationStore.ts`
+- `netsuiteOAuth.ts`
+
+Motivo:
+
+- son mas sensibles, mas voluminosos o piden una estrategia mas robusta que JSON + lock manual
+
+Documento relacionado:
+
+- `docs/codex/file-store-locking-decision.md`
+
 ## Proxima fase recomendada: locking real
 
 Opciones razonables para la siguiente fase:
