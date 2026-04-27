@@ -7,13 +7,30 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PATTERNS = (
+    ".github/workflows/*.yml",
+    ".gitignore",
+    ".gitattributes",
+    ".editorconfig",
+    "package.json",
     "backend/src/**/*.ts",
     "frontend/src/**/*.ts",
     "frontend/src/**/*.tsx",
-    ".editorconfig",
-    ".gitattributes",
-    ".github/workflows/*.yml",
+    "tests/**/*.mjs",
+    "tools/**/*.py",
+    "deploy/**/*.yml",
+    "docs/**/*.md",
 )
+
+EXCLUDED_DIR_NAMES = {
+    ".git",
+    ".cache",
+    ".vite",
+    "__pycache__",
+    "build",
+    "coverage",
+    "dist",
+    "node_modules",
+}
 
 BIDI_CODEPOINTS = {
     0x200E,
@@ -43,7 +60,11 @@ INVISIBLE_DANGEROUS_CODEPOINTS = {
 def iter_files() -> list[Path]:
     files: set[Path] = set()
     for pattern in PATTERNS:
-        files.update(path for path in REPO_ROOT.glob(pattern) if path.is_file())
+        files.update(
+            path
+            for path in REPO_ROOT.glob(pattern)
+            if path.is_file() and not any(part in EXCLUDED_DIR_NAMES for part in path.parts)
+        )
     return sorted(files)
 
 
