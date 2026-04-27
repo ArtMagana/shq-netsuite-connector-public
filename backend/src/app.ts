@@ -195,7 +195,14 @@ export function createApp() {
   )
   app.use(express.json({ limit: getJsonBodyLimit() }))
 
-  app.use('/api/bancos', createBancosRoutes({ analyzeBankImport, startBankImportAnalysisRun, getBankImportConfig, BankImportError }))
+  app.use('/api/bancos', createBancosRoutes({
+    analyzeBankImport,
+    startBankImportAnalysisRun,
+    recoverBankImportAnalysisRun,
+    getBankImportAnalysisRunStatus,
+    getBankImportConfig,
+    BankImportError,
+  }))
   app.use('/api/inventario', createInventarioRoutes({ lookupInventoryCertificate, InventoryCertificateError, NetSuiteClient, fetchInventoryAdjustmentBootstrap, fetchInventoryAdjustmentItemSnapshot, searchInventoryAdjustmentAccounts, searchInventoryAdjustmentItems, InventoryAdjustmentError }))
 
   app.use('/api', createBasicRoutes({
@@ -210,28 +217,6 @@ export function createApp() {
     invoices,
     previewReconciliation,
   }))
-
-  app.post('/api/bancos/analysis/recover', requireInternalApiKey, (request, response) => {
-    try {
-      response.json(recoverBankImportAnalysisRun(request.body))
-    } catch (error) {
-      const status = error instanceof BankImportError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown bank analysis recover error.',
-      })
-    }
-  })
-
-  app.get('/api/bancos/analysis/:analysisId', (request, response) => {
-    try {
-      response.json(getBankImportAnalysisRunStatus(String(request.params.analysisId ?? '')))
-    } catch (error) {
-      const status = error instanceof BankImportError ? error.status : 503
-      response.status(status).json({
-        error: error instanceof Error ? error.message : 'Unknown bank analysis status error.',
-      })
-    }
-  })
 
   app.post('/api/bancos/history/upload', requireInternalApiKey, async (request, response) => {
     try {
