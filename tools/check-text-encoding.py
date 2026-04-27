@@ -16,6 +16,7 @@ PATTERNS = (
     "frontend/src/**/*.ts",
     "frontend/src/**/*.tsx",
     "tests/**/*.mjs",
+    "tools/**/*.mjs",
     "tools/**/*.py",
     "deploy/**/*.yml",
     "docs/**/*.md",
