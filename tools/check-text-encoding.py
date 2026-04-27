@@ -10,6 +10,7 @@ PATTERNS = (
     "backend/src/**/*.ts",
     "frontend/src/**/*.ts",
     "frontend/src/**/*.tsx",
+    "docs/codex/**/*.md",
     ".editorconfig",
     ".gitattributes",
     ".github/workflows/*.yml",
