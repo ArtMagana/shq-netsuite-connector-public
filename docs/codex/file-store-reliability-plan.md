@@ -183,19 +183,22 @@ Este prototipo si mejora:
 - backup previo al write
 - errores explicitos de parseo JSON
 - formato JSON estable con newline final
+- locking local para serializar `upsert` en `bankEquivalenceStore`
 
 Este prototipo no resuelve todavia:
 
-- `lost updates` por concurrencia `read-modify-write`
+- `lost updates` en los stores que siguen legacy
 - locking entre procesos
 - retencion historica de backups
 - recuperacion automatica de JSON corrupto
 - migracion de todos los stores
+- concurrencia distribuida fuera del filesystem compartido del laboratorio
 
 En otras palabras:
 
 - reduce el riesgo de truncado y de overwrite sin respaldo inmediato
-- no elimina el problema de dos procesos leyendo el mismo estado viejo y escribiendo despues
+- reduce el riesgo de `lost updates` solo en el store piloto protegido
+- no elimina el problema de dos procesos leyendo el mismo estado viejo y escribiendo despues en los stores no migrados
 
 ### Tests agregados
 
@@ -237,6 +240,7 @@ Cambio aplicado:
   - `createBackupFile(...)`
   - `writeJsonFileAtomic(...)`
 - resolucion del path movida a `resolveOverrideStorePath()` por llamada
+- `upsert` protegido por `withFileLock(...)` para cubrir todo el ciclo `read-modify-write`
 
 Motivo de seleccion:
 
@@ -277,18 +281,32 @@ Lo que implica:
 
 ## Estrategia de locking
 
-No implementar en esta rama todavia.
+Estado actual:
 
-Orden recomendado:
+- se implemento un prototipo de locking local en `backend/src/infrastructure/storage/fileStoreLock.ts`
+- el helper usa `${filePath}.lock` y `fs.openSync(..., 'wx')`
+- el lock guarda metadata minima con `pid` y timestamp
+- el cleanup ocurre en `finally`
+- si encuentra un lock stale por edad, intenta limpiarlo antes de reintentar
+
+Lo que aun no hace:
+
+- no introduce un lock global para todos los stores
+- no resuelve coordinacion distribuida fuera del filesystem del laboratorio
+- no ofrece observabilidad ni metricas de contencion
+- no rota ni audita locks stale mas alla de su remocion basica
+
+Orden recomendado despues de este prototipo:
 
 1. atomic write
 2. backup
-3. metricas/log de conflictos
-4. locking si aun hace falta
+3. locking puntual en stores piloto
+4. metricas/log de conflictos
+5. evaluar dependencia externa si aun hace falta
 
 Motivo:
 
-- meter locks primero complica recovery y portabilidad Docker/NAS
+- este orden deja el lock como capa incremental y auditable, no como refactor global
 
 ## Proxima fase recomendada: locking real
 
@@ -335,8 +353,8 @@ Contras:
 
 Recomendacion actual:
 
-- si el siguiente experimento sigue en el repo publico laboratorio, la mejor opcion para evaluar primero es `proper-lockfile`
-- si la compatibilidad Docker/NAS genera dudas, hacer un spike pequeno comparando `proper-lockfile` vs lock manual antes de migrar stores adicionales
+- despues de este prototipo, el lock manual ya sirve para validar el patron en laboratorio
+- si aparecen problemas de stale lock, permisos o comportamiento en NAS/Docker, el siguiente spike deberia comparar `proper-lockfile` vs lock manual antes de migrar stores adicionales
 
 ## Validaciones y tests recomendados
 
@@ -344,10 +362,20 @@ Recomendacion actual:
 - sobrescribir archivo existente y confirmar backup
 - simular JSON invalido y verificar error contextual
 - simular doble write secuencial y verificar integridad
+- verificar timeout de lock y limpieza de `.lock`
+- verificar recuperacion ante stale lock
 - backend build
 - `npm test`
 - `git diff --check`
 - `python tools/check-text-encoding.py`
+
+## Limitacion actual de tests de concurrencia del store
+
+- el helper de lock si tiene cobertura directa de exclusividad, timeout y cleanup
+- `bankEquivalenceStore` tiene cobertura de integracion para stale lock y persistencia final
+- no se agrego todavia un test determinista de `upserts` concurrentes multi-proceso sobre el store
+- se pospuso porque el API actual es sincrono y una prueba con timing artificial seria mas fragil que util en esta fase
+- la siguiente iteracion puede introducir un harness de procesos controlado si hace falta validar contencion real del store
 
 ## Stores pendientes prioritarios
 
@@ -375,20 +403,20 @@ Motivo:
 
 ## Riesgos restantes
 
-- no hay locking real todavia
+- solo `bankEquivalenceStore` usa locking
 - los demas stores siguen con read/modify/write legacy
 - `createBackupFile(...)` usa un solo `.bak` y no tiene rotacion
-- no hay pruebas de concurrencia
+- no hay prueba multi-proceso determinista sobre el store piloto
 - la mayoria de loaders legacy siguen haciendo silent catch
 
 ## Proxima fase recomendada
 
-1. decidir si conviene introducir locking real con `proper-lockfile` o alternativa minima
-2. agregar pruebas de concurrencia sobre temp dirs
-3. definir retencion de backups `.bak`
-4. migrar stores de riesgo bajo-medio de forma gradual
-5. definir estrategia de recuperacion para JSON corrupto
-6. evaluar si algun store necesita writer asincrono o cola dedicada
+1. validar el prototipo de locking en el laboratorio NAS/Docker
+2. decidir si conviene mantener lock manual o evaluar `proper-lockfile`
+3. agregar un harness de concurrencia multi-proceso para el store piloto
+4. definir retencion de backups `.bak`
+5. migrar stores de riesgo bajo-medio de forma gradual
+6. definir estrategia de recuperacion para JSON corrupto
 
 ## Validacion Docker aislada
 
