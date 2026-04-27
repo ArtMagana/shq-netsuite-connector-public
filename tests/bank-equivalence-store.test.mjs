@@ -124,3 +124,24 @@ test('loadBankEquivalenceOverrides throws an explicit error when the JSON file i
     })
   })
 })
+
+test('upsertBankEquivalenceOverride recovers from a stale lock file and cleans it up', { concurrency: false }, () => {
+  withTempDirectory((tempDirectoryPath) => {
+    const filePath = path.join(tempDirectoryPath, 'bank-equivalence-overrides.json')
+    const lockPath = `${filePath}.lock`
+    const staleTimestamp = new Date(Date.now() - 60_000)
+
+    fs.writeFileSync(lockPath, '{"pid":999}\n', 'utf8')
+    fs.utimesSync(lockPath, staleTimestamp, staleTimestamp)
+
+    withEquivalenceStorePath(filePath, () => {
+      const stored = upsertBankEquivalenceOverride(createOverrideInput())
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+
+      assert.equal(parsed.items.length, 1)
+      assert.equal(parsed.items[0].normalizedCounterpartyName, 'ACME SA DE CV')
+      assert.equal(stored.normalizedCounterpartyName, 'ACME SA DE CV')
+      assert.equal(fs.existsSync(lockPath), false)
+    })
+  })
+})
