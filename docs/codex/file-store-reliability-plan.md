@@ -62,6 +62,9 @@ Comportamiento:
   - serializa con formato consistente y newline final
   - escribe primero a `*.tmp`
   - usa `rename` para reemplazo atomico
+  - reduce el riesgo de escrituras parciales al evitar sobrescribir el archivo final directamente
+  - no garantiza durabilidad total ante corte electrico o crash del sistema porque no hace `fsync` ni del archivo temporal ni del directorio
+  - para este port inicial es aceptable, pero si el patron se mueve a stores criticos habra que evaluar `fsync` y requisitos de durabilidad mas adelante
 - `createBackupFile(...)`
   - crea un `.bak` del archivo existente antes de sobrescribir
   - no falla si el archivo aun no existe
