@@ -28,12 +28,8 @@ type StoredBankEquivalenceOverrideFile = {
   items: StoredBankEquivalenceOverride[]
 }
 
-const OVERRIDE_STORE_PATH =
-  process.env.BANKS_EQUIVALENCE_OVERRIDE_STORE_PATH?.trim() ||
-  path.join(process.env.LOCALAPPDATA || process.cwd(), 'netsuite-recon', 'bank-equivalence-overrides.json')
-
 export function loadBankEquivalenceOverrides() {
-  const parsed = readJsonFile<Partial<StoredBankEquivalenceOverrideFile>>(OVERRIDE_STORE_PATH, {
+  const parsed = readJsonFile<Partial<StoredBankEquivalenceOverrideFile>>(resolveOverrideStorePath(), {
     version: 2,
     items: [],
   })
@@ -80,9 +76,10 @@ function persistOverrides(items: StoredBankEquivalenceOverride[]) {
     version: 2,
     items,
   }
+  const storePath = resolveOverrideStorePath()
 
-  createBackupFile(OVERRIDE_STORE_PATH)
-  writeJsonFileAtomic(OVERRIDE_STORE_PATH, payload)
+  createBackupFile(storePath)
+  writeJsonFileAtomic(storePath, payload)
 }
 
 function isStoredOverride(value: unknown): value is StoredBankEquivalenceOverride {
@@ -150,4 +147,11 @@ function resolveLegacySourceProfileId(bankId: BankImportBankId, mappingSheetKey:
   }
 
   return 'payana_transacciones'
+}
+
+function resolveOverrideStorePath() {
+  return (
+    process.env.BANKS_EQUIVALENCE_OVERRIDE_STORE_PATH?.trim() ||
+    path.join(process.env.LOCALAPPDATA || process.cwd(), 'netsuite-recon', 'bank-equivalence-overrides.json')
+  )
 }
