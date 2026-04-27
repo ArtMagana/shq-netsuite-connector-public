@@ -302,6 +302,12 @@ Siguiente store piloto sugerido:
 
 - `backend/src/bankBalanceValidationStore.ts`
 
+Importante:
+
+- se mantiene solo como candidato de analisis o piloto posterior
+- este documento no recomienda migrarlo todavia
+- antes debe existir un spike separado que compare lock manual vs `proper-lockfile`
+
 Motivos:
 
 - pequeno
@@ -326,6 +332,14 @@ Motivo:
 Documento relacionado:
 
 - `docs/codex/file-store-locking-decision.md`
+
+## Proximo PR recomendado
+
+- crear un spike separado para comparar lock manual vs `proper-lockfile`
+- no migrar `bankBalanceValidationStore.ts` todavia
+- no agregar SQLite todavia
+- validar el spike solo con temp dirs, CI y pruebas documentadas
+- documentar requisitos y riesgos para NAS/Docker antes de pensar en uso fuera del laboratorio
 
 ## Proxima fase recomendada: locking real
 
