@@ -4,25 +4,38 @@
 
 Reducir el riesgo de corrupcion o race condition en stores JSON sin migrarlos todos de golpe.
 
-## Stores encontrados
+## Inventario real de stores principales
 
-- `backend/src/bankAnalysisRunStore.ts`
-- `backend/src/bankBalanceValidationStore.ts`
-- `backend/src/bankEquivalenceStore.ts`
-- `backend/src/bankHistoricalRegistryStore.ts`
-- `backend/src/bankIndividualPaymentStore.ts`
-- `backend/src/bankRecognitionOverrideStore.ts`
-- `backend/src/bankWorkingFileStore.ts`
-- `backend/src/banxicoCepRecognitionStore.ts`
-- `backend/src/claveSatStore.ts`
-- `backend/src/egresosConciliationStore.ts`
-- `backend/src/kontempoStore.ts`
-- `backend/src/netsuiteAccountStore.ts`
-- `backend/src/netsuiteEntityStore.ts`
-- `backend/src/satDownloadHistoryStore.ts`
-- `backend/src/satIgnoredCfdiStore.ts`
-- `backend/src/satManualHomologationStore.ts`
-- `backend/src/satRetentionAccountStore.ts`
+| Archivo | Tipo de datos que maneja | Usa JSON | Lee y escribe | Riesgo de race condition | Riesgo de corrupcion parcial | Tiene silent catch | Candidato para primer prototipo | Riesgo de migrarlo |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `backend/src/bankAnalysisRunStore.ts` | corridas de analisis bancario | Si | Si | Alto | Alto | Si | No | Medio-alto |
+| `backend/src/bankBalanceValidationStore.ts` | saldos bancarios validados | Si | Si | Medio | Medio | Si | No | Medio |
+| `backend/src/bankEquivalenceStore.ts` | equivalencias manuales de contrapartes | Si | Si | Medio | Medio | Si | Si | Bajo-medio |
+| `backend/src/bankHistoricalRegistryStore.ts` | registros de cargas historicas bancarias | Si | Si | Alto | Alto | Si | No | Alto |
+| `backend/src/bankIndividualPaymentStore.ts` | archivos de pagos individuales con base64 | Si | Si | Medio | Alto | Si | No | Medio-alto |
+| `backend/src/bankRecognitionOverrideStore.ts` | overrides manuales de reconocimiento bancario | Si | Si | Alto | Alto | Si | No | Medio-alto |
+| `backend/src/bankWorkingFileStore.ts` | archivo bancario de trabajo con base64 | Si | Si | Alto | Alto | Si | No | Medio-alto |
+| `backend/src/banxicoCepRecognitionStore.ts` | reconocimientos manuales CEP | Si | Si | Medio-alto | Alto | Si | No | Medio-alto |
+| `backend/src/claveSatStore.ts` | snapshot de catalogo Clave SAT | Si | Si | Bajo-medio | Medio | Si | No | Medio |
+| `backend/src/egresosConciliationStore.ts` | conciliaciones locales de egresos | Si | Si | Medio | Medio | Si | No | Medio |
+| `backend/src/kontempoStore.ts` | homologaciones, recognitions e import runs de Kontempo | Si | Si | Alto | Alto | Si | No | Alto |
+| `backend/src/netsuiteAccountStore.ts` | cache de catalogo de cuentas NetSuite | Si | Si | Bajo-medio | Medio | Si | No | Medio |
+| `backend/src/netsuiteEntityStore.ts` | cache de catalogos de entidades NetSuite | Si | Si | Bajo-medio | Medio | Si | No | Medio |
+| `backend/src/satDownloadHistoryStore.ts` | historial de paquetes y CFDI SAT | Si | Si | Alto | Alto | Si | No | Alto |
+| `backend/src/satIgnoredCfdiStore.ts` | CFDI ignorados y motivos | Si | Si | Medio | Medio-alto | Si | No | Medio-alto |
+| `backend/src/satManualHomologationStore.ts` | homologaciones manuales SAT | Si | Si | Alto | Alto | Si | No | Alto |
+| `backend/src/satRetentionAccountStore.ts` | reglas de cuentas de retenciones SAT | Si | Si | Medio | Medio | Si | No | Medio |
+
+## Persistencias JSON auxiliares relacionadas
+
+Estas rutas no siguen el patron `*Store.ts`, pero si participan en el riesgo general de persistencia local y deben entrar en la hoja de ruta:
+
+| Archivo | Tipo de datos que maneja | Usa JSON | Lee y escribe | Riesgo principal | Silent catch | Notas |
+| --- | --- | --- | --- | --- | --- | --- |
+| `backend/src/netsuiteOAuth.ts` | sesion OAuth almacenada en disco | Si | Si | secreto en texto plano y write no atomico | No | no es candidato del prototipo por sensibilidad |
+| `backend/src/satAnalysisWindows.ts` | ventanas de analisis SAT | Si | Si | overwrites y estado de workflow | Si | mejor dejarlo para una fase posterior |
+| `backend/src/sat.ts` | manifiestos de cache SAT en disco | Si | Si | cache parcial o inconsistente | Si | mezcla cache binario y JSON |
+| `backend/src/inventoryLotReplacementRegistry.ts` | registry de reemplazos de lote | Si | Si | escritura async directa sin backup | Si | ligado a inventario, no ideal para piloto |
 
 ## Patron actual observado
 
@@ -39,6 +52,13 @@ Ejemplos representativos:
 - `backend/src/bankWorkingFileStore.ts`
 - cache/manifiesto en `backend/src/sat.ts`
 - token store en `backend/src/netsuiteOAuth.ts`
+
+Hallazgos comunes:
+
+- varios stores limpian BOM manualmente, pero no todos
+- la mayoria atrapa `JSON.parse(...)` con `catch { return [] }`
+- no hay atomicidad ni backups consistentes
+- no hay un helper compartido; cada store reimplementa lectura/escritura
 
 ## Riesgos actuales
 
@@ -87,17 +107,34 @@ Ejemplos representativos:
 
 ## Store piloto recomendado
 
-- `backend/src/bankAnalysisRunStore.ts`
+- candidato elegido para este prototipo: `backend/src/bankEquivalenceStore.ts`
 
 Motivos:
 
-- ya participa en analisis async de bancos
-- mezcla create/update/read de manera frecuente
-- una perdida o overwrite ahi pega a UX y trazabilidad
+- es pequeno y autocontenido
+- no guarda secretos ni archivos base64
+- no participa en el arranque base ni en `api/health`
+- su estructura es simple:
+  - `version`
+  - `items`
+- el flujo de `load/upsert/persist` es directo y facil de probar
+- si una corrupcion de JSON aparece, el impacto de negocio es menor que en SAT, OAuth, working files o analysis runs
 
-Segundo candidato:
+Candidatos de segunda linea:
 
-- `backend/src/bankWorkingFileStore.ts`
+- `backend/src/bankBalanceValidationStore.ts`
+- `backend/src/egresosConciliationStore.ts`
+
+Candidatos descartados para esta primera migracion:
+
+- `bankWorkingFileStore.ts`
+  - guarda base64 de archivos bancarios
+- `bankIndividualPaymentStore.ts`
+  - guarda base64 y volumen de datos mayor
+- `bankAnalysisRunStore.ts`
+  - mas critico para trazabilidad de analisis
+- `netsuiteOAuth.ts`
+  - maneja tokens/sesion y requiere un diseno de seguridad separado
 
 ## Diseno sugerido de helper base
 
