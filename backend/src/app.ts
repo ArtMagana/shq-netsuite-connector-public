@@ -395,7 +395,7 @@ export function createApp() {
     }
   })
 
-  app.post('/api/bancos/cep/lookup', async (request, response) => {
+  app.post('/api/bancos/cep/lookup', requireInternalApiKey, async (request, response) => {
     try {
       response.json(await lookupBanxicoCep(request.body))
     } catch (error) {
@@ -561,7 +561,7 @@ export function createApp() {
     }
   })
 
-  app.post('/api/catalogs/netsuite/accounts/import/preview', async (request, response) => {
+  app.post('/api/catalogs/netsuite/accounts/import/preview', requireInternalApiKey, async (request, response) => {
     try {
       response.json(await previewNetSuiteAccountImport(typeof request.body?.rawText === 'string' ? request.body.rawText : null))
     } catch (error) {
@@ -630,7 +630,7 @@ export function createApp() {
     }
   })
 
-  app.post('/api/search/transactions', async (request, response) => {
+  app.post('/api/search/transactions', requireInternalApiKey, async (request, response) => {
     try {
       const client = NetSuiteClient.fromEnv()
       response.json(await searchTransactions(client, request.body))
@@ -1511,7 +1511,7 @@ export function createApp() {
     }
   })
 
-  app.post('/api/netsuite/suiteql', async (request, response) => {
+  app.post('/api/netsuite/suiteql', requireInternalApiKey, async (request, response) => {
     try {
       const client = NetSuiteClient.fromEnv()
       const query = String(request.body.query ?? '')
