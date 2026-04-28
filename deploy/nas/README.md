@@ -71,6 +71,7 @@ Todo esto queda fuera del contenedor y sobrevive reinicios:
 
 - No apuntes el contenedor a tu carpeta de trabajo viva como volumen de codigo.
 - Usa `APP_PUBLIC_BASE_URL` real para que OAuth y enlaces de retorno no queden amarrados a `127.0.0.1`.
+- Configura `ALLOWED_ORIGINS` en `netsuite-recon.env` con la URL real del NAS antes de desplegar. En produccion el backend rechaza arrancar con la lista vacia.
 - Si quieres OAuth 2.0 de NetSuite, el `redirect URI` debe ser HTTPS o un dominio/tunel valido.
 - Si solo usaras TBA, puedes dejar OAuth vacio.
 

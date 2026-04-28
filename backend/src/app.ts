@@ -188,6 +188,7 @@ export function createApp() {
     [
       '/api/bancos/analyze',
       '/api/bancos/analysis/start',
+      '/api/bancos/analysis/recover',
       '/api/bancos/history/upload',
       '/api/bancos/pagos-individuales/upload',
     ],
